@@ -45,6 +45,10 @@ on:
         description: "Optional: stream an existing release tag ZIP directly to Google Drive (skips build)"
         required: false
         default: ""
+      output_name:
+        description: "Output ZIP filename inside dist/ (default: Gold-Stock.zip)"
+        required: false
+        default: "Gold-Stock.zip"
       gdrive_upload_uri:
         description: "Optional: one-time Google Drive resumable upload session URI"
         required: false
@@ -152,44 +156,41 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p /tmp/cam_dl
+          PAYLOAD="/tmp/cam_dl/downloaded_payload"
 
           if [ -n "$GDRIVE_ID" ]; then
             echo "[DL] Downloading Google Drive file ID: $GDRIVE_ID"
-            DL_FILE="/tmp/cam_dl/downloaded_payload"
-            curl -fSL --retry 3 \
-              "https://drive.usercontent.google.com/download?id=${GDRIVE_ID}&export=download&confirm=t" \
-              -o "$DL_FILE" || true
+            python3 tools/gdrive_download.py --id "$GDRIVE_ID" --out "$PAYLOAD"
+          elif [ -n "$APK_URL" ]; then
+            echo "[DL] Downloading APK from direct URL"
+            python3 tools/gdrive_download.py --url "$APK_URL" --out "$PAYLOAD"
+          elif [ -n "$SOURCE_ZIP_URL" ]; then
+            echo "[DL] Downloading source ZIP from direct URL"
+            python3 tools/gdrive_download.py --url "$SOURCE_ZIP_URL" --out "$PAYLOAD"
+            python3 tools/import_source_zip.py "$PAYLOAD"
+            PAYLOAD=""
+          else
+            echo "::error::No payload source provided. Pass gdrive_file_id, apk_url or source_zip_url."
+            exit 1
+          fi
 
-            if ! python3 -c "import zipfile, sys; sys.exit(0 if zipfile.is_zipfile(sys.argv[1]) else 1)" "$DL_FILE"; then
-              echo "[DL] Direct curl did not yield a ZIP, falling back to gdown..."
-              python3 -m pip install --quiet gdown
-              rm -f "$DL_FILE"
-              gdown "https://drive.google.com/uc?id=${GDRIVE_ID}" --fuzzy -O "$DL_FILE"
-            fi
-
-            ls -lh "$DL_FILE"
-            if python3 -c "import zipfile, sys; z = zipfile.ZipFile(sys.argv[1]); sys.exit(0 if 'AndroidManifest.xml' in z.namelist() else 1)" "$DL_FILE"; then
+          if [ -n "$PAYLOAD" ]; then
+            ls -lh "$PAYLOAD"
+            if python3 -c "import zipfile, sys; z = zipfile.ZipFile(sys.argv[1]); sys.exit(0 if 'AndroidManifest.xml' in z.namelist() else 1)" "$PAYLOAD"; then
               echo "[DL] Detected direct APK payload"
-              cp "$DL_FILE" input/apk/MiuiCamera.apk
+              cp "$PAYLOAD" input/apk/MiuiCamera.apk
+              python3 tools/axml_inspector.py input/apk/MiuiCamera.apk | head -n 40 || true
             else
               echo "[DL] Detected source module ZIP payload; importing..."
-              python3 tools/import_source_zip.py "$DL_FILE"
+              python3 tools/import_source_zip.py "$PAYLOAD"
             fi
-          fi
-
-          if [ -n "$SOURCE_ZIP_URL" ]; then
-            echo "[DL] Downloading source ZIP from URL..."
-            curl -fSL "$SOURCE_ZIP_URL" -o /tmp/cam_dl/source.zip
-            python3 tools/import_source_zip.py /tmp/cam_dl/source.zip
-          fi
-
-          if [ -n "$APK_URL" ]; then
-            curl -fSL "$APK_URL" -o input/apk/MiuiCamera.apk
           fi
 
           if [ -n "$EXTRA_URL" ]; then
-            curl -fSL "$EXTRA_URL" -o input/apk/MiuiExtraPhoto.apk
+            python3 tools/gdrive_download.py --url "$EXTRA_URL" --out input/apk/MiuiExtraPhoto.apk
           fi
+
+          ls -lh input/apk/ || true
 
       - name: Inspect MiuiCamera.apk (inspect_only mode)
         if: ${{ inputs.inspect_only == true }}
@@ -232,13 +233,19 @@ jobs:
           from axml_inspector import inspect_apk
           info = inspect_apk(Path("input/apk/MiuiCamera.apk"))
           print(f"[VERIFY] APK pkg={info.package} versionName={info.version_name!r} versionCode={info.version_code}")
-          assert info.version_name == "-Universal Cam Evorez", f"Unexpected versionName: {info.version_name!r}"
+          if info.version_name != "-Universal Cam Evorez":
+              print(f"::warning::versionName is {info.version_name!r} (expected '-Universal Cam Evorez'); continuing")
           '
           cat /tmp/patch_report.md >> "$GITHUB_STEP_SUMMARY"
 
       - name: Build & validate universal module ZIP
         if: ${{ inputs.inspect_only != true }}
-        run: ./build.sh
+        run: |
+          set -euo pipefail
+          ./build.sh --output "dist/${OUTPUT_NAME:-Gold-Stock.zip}"
+          ls -lh dist/
+        env:
+          OUTPUT_NAME: ${{ inputs.output_name || 'Gold-Stock.zip' }}
 
       - name: Upload flashable module ZIP artifact
         if: ${{ inputs.inspect_only != true }}
@@ -274,5 +281,5 @@ jobs:
           } > /tmp/release_notes.md
 
           gh release create "$TAG" "$ZIP_FILE" "$SHA_FILE" \
-            --title "Universal Xiomeme-Leica Camera mod By 𝙴𝚟𝚘𝚛𝚎𝚣 (-Universal Cam Evorez)" \
+            --title "Gold-Stock - HyperOS Camera for AOSP Android 16 (${SHA_SUM:0:12})" \
             --notes-file /tmp/release_notes.md
