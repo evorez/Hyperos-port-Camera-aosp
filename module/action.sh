@@ -62,7 +62,38 @@ rm -rf "/data/user/0/${CAM_PKG}/cache/"* 2>/dev/null
 rm -rf "/data/user/0/${CAM_PKG}/code_cache/"* 2>/dev/null
 echo "  Done."
 echo ""
-echo "If the camera still crashes, capture logs with:"
-echo "  adb logcat -d | grep -iE 'AndroidRuntime|MiuiCamera|com.android.camera|CameraService'"
+echo "- Collecting crash diagnostics bundle..."
+DIAG_DIR="/sdcard/Download"
+[ -d "$DIAG_DIR" ] || DIAG_DIR="/sdcard"
+DIAG_FILE="$DIAG_DIR/GoldStock-diag-$(date +%Y%m%d-%H%M%S).txt"
+{
+  echo "Gold-Stock diagnostics ($(date))"
+  echo "device=$(getprop ro.product.model) device=$(getprop ro.product.vendor.device)"
+  echo "android=$(getprop ro.build.version.release) api=$(getprop ro.build.version.sdk) rom=$(getprop ro.build.display.id)"
+  echo "selinux=$(getenforce 2>/dev/null) enforcing_privapp=$(getprop ro.control_privapp_permissions)"
+  echo "module_status:"
+  cat "$MODDIR/module.prop" 2>/dev/null
+  echo "--- pm path ---"
+  pm path "$CAM_PKG" 2>/dev/null
+  echo "--- package flags (priv-app / signature / enabled) ---"
+  dumpsys package "$CAM_PKG" 2>/dev/null | grep -iE "flags=|versionName|codePath|granted=true|userId" | head -n 25
+  echo "--- mounted module files ---"
+  ls -l /system/priv-app/MiuiCamera/ 2>/dev/null | head -n 10
+  ls -l /system/etc/permissions/ 2>/dev/null | grep -i camera
+  echo "--- crash buffer ---"
+  logcat -b crash -d -t 400 2>/dev/null
+  echo "--- camera/logcat filtered ---"
+  logcat -d -t 1200 2>/dev/null | grep -iE "AndroidRuntime|FATAL|MiuiCamera|com\.android\.camera|UnsatisfiedLinkError|NoClassDefFoundError|VerifyError|ClassNotFoundException|CameraService|avc: denied" | tail -n 300
+  echo "--- boot log ---"
+  tail -n 120 "/data/adb/modules/${MODULE_ID:-hyperos_cam_aosp}/logs/boot.log" 2>/dev/null
+} > "$DIAG_FILE" 2>&1
+
+if [ -s "$DIAG_FILE" ]; then
+  echo "  Saved: $DIAG_FILE"
+  echo "  Share this file (or its 'AndroidRuntime' lines) to get the exact crash reason."
+else
+  echo "  Could not write diagnostics file; run adb logcat instead:"
+  echo "  adb logcat -d | grep -iE 'AndroidRuntime|MiuiCamera|com.android.camera|CameraService'"
+fi
 echo "================================================"
 exit 0
