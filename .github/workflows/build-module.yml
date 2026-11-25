@@ -71,8 +71,24 @@ jobs:
           RELEASE_TAG: ${{ inputs.sync_release_tag }}
           GDRIVE_UPLOAD_URI: ${{ inputs.gdrive_upload_uri }}
         run: |
-          set -euo pipefail
+          set -Eeuo pipefail
           echo "::add-mask::$GDRIVE_UPLOAD_URI"
+          exec > >(tee -a /tmp/sync.log) 2>&1
+          diag() {
+            rc=$?
+            [ "$rc" -eq 0 ] && return 0
+            echo "::error::sync-to-drive failed (rc=$rc) at line ${LINENO}"
+            {
+              echo "### sync-to-drive failure (line ${LINENO}, rc=$rc)"
+              echo '```'
+              tail -n 60 /tmp/sync.log 2>/dev/null
+              echo '```'
+            } > /tmp/sync_fail.md || true
+            gh api -X POST "repos/${GITHUB_REPOSITORY}/commits/${GITHUB_SHA}/comments" \
+              -F body=@/tmp/sync_fail.md >/dev/null 2>&1 || true
+            return "$rc"
+          }
+          trap diag ERR
           mkdir -p /tmp/rel_dl
           gh release download "$RELEASE_TAG" -R "${{ github.repository }}" -p "*.zip" -p "*.sha256" -D /tmp/rel_dl
           ls -lh /tmp/rel_dl
