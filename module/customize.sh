@@ -160,6 +160,48 @@ if [ "$REPLACE_POLICY" != "none" ]; then
   fi
 fi
 
+# 6.5 Bridge HyperOS vendor algorithm libraries into the camera's native lib dir
+# Stock HyperOS Camera 6.x loads libmialgoengine.so and friends from the vendor
+# partition (com.xiaomi.engine.MiCamAlgoInterfaceJNI -> dlopen). AOSP/LineageOS
+# ROMs usually still carry those blobs under /vendor/lib64 or /odm/lib64 but the
+# camera app cannot reach them from its own linker namespace, which aborts the
+# process at startup with "open libmialgoengine.so failed!". Copy every matching
+# vendor blob into the app's private lib dir so dlopen resolves it locally.
+ui_print "- Bridging HyperOS vendor algorithm libraries (libmialgo*)..."
+ALGO_LIB_DIR="$MODPATH/system/priv-app/MiuiCamera/lib/arm64"
+ALGO_LIB_DIR_ALT="$MODPATH/system/lib64"
+ALGO_COUNT=0
+ALGO_FOUND=""
+
+for src_dir in /vendor/lib64 /odm/lib64 /system/vendor/lib64 /vendor/lib64/camera \
+               /odm/lib64/camera /system_ext/lib64 /product/lib64; do
+  [ -d "$src_dir" ] || continue
+  for pattern in "libmialgo*.so" "libmialgo*.so.*" "libcamera_algoup*.so" \
+                 "libcam_algoup*.so" "libmtkcam_algo*.so" "libcam.algo*.so"; do
+    for lib in "$src_dir"/$pattern; do
+      [ -f "$lib" ] || continue
+      lib_name="${lib##*/}"
+      [ -f "$ALGO_LIB_DIR/$lib_name" ] && continue
+      mkdir -p "$ALGO_LIB_DIR" "$ALGO_LIB_DIR_ALT"
+      if cp -f "$lib" "$ALGO_LIB_DIR/$lib_name" 2>/dev/null; then
+        cp -f "$lib" "$ALGO_LIB_DIR_ALT/$lib_name" 2>/dev/null || true
+        ALGO_COUNT=$((ALGO_COUNT + 1))
+        ALGO_FOUND="$ALGO_FOUND $lib_name"
+        ui_print "  + $lib_name (from $src_dir)"
+      fi
+    done
+  done
+done
+
+if [ "$ALGO_COUNT" -gt 0 ]; then
+  ui_print "  Bridged $ALGO_COUNT vendor algo lib(s):$ALGO_FOUND"
+else
+  ui_print "  ! No libmialgo* vendor blob found on this ROM."
+  ui_print "    The stock camera aborts in MiCameraAlgo.init without libmialgoengine.so."
+  ui_print "    Fix: pull libmialgoengine.so (+ libmialgo_basic/utils/noise) from your"
+  ui_print "    HyperOS ROM's /vendor/lib64 and drop them into input/lib64/, then rebuild."
+fi
+
 # 7. Set strict permissions & SELinux contexts
 ui_print "- Setting file permissions and SELinux contexts..."
 set_perm_recursive "$MODPATH" 0 0 0755 0644

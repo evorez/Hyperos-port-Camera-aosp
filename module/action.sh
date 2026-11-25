@@ -77,6 +77,13 @@ DIAG_FILE="$DIAG_DIR/GoldStock-diag-$(date +%Y%m%d-%H%M%S).txt"
   pm path "$CAM_PKG" 2>/dev/null
   echo "--- package flags (priv-app / signature / enabled) ---"
   dumpsys package "$CAM_PKG" 2>/dev/null | grep -iE "flags=|versionName|codePath|granted=true|userId" | head -n 25
+  echo "--- algo library audit (MiCameraAlgo.init needs libmialgoengine.so) ---"
+  for d in /vendor/lib64 /odm/lib64 /system_ext/lib64 /product/lib64 /system/lib64; do
+    hits=$(ls "$d" 2>/dev/null | grep -iE "mialgo|algoup" | head -n 12)
+    [ -n "$hits" ] && echo "$d:" && echo "$hits" | sed "s/^/    /"
+  done
+  echo "  in app lib dir:"
+  ls -l /system/priv-app/MiuiCamera/lib/arm64/ 2>/dev/null | grep -iE "mialgo|algoup" | sed "s/^/    /" || echo "    (none)"
   echo "--- mounted module files ---"
   ls -l /system/priv-app/MiuiCamera/ 2>/dev/null | head -n 10
   ls -l /system/etc/permissions/ 2>/dev/null | grep -i camera
