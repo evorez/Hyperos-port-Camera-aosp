@@ -1,10 +1,25 @@
 # Gold-Stock — HyperOS Camera for AOSP Android 16
 
 **Deliverable:** [`Gold-Stock.zip`](https://github.com/evorez/Hyperos-port-Camera-aosp/releases/latest/download/Gold-Stock.zip) — Magisk / KernelSU / KernelSU-Next / APatch flashable module (193 MB, 57 entries).
-**Release tag (current):** `build-20261125-140042` · SHA-256 `7d0fd7b2c40d671283c4a7a29b773ef0079f9c3afdeb74751fe726f1a89eb171`
+**Release tag (current):** `build-20261125-142811` · SHA-256 `327d54ab5dcfd7357c6fd5c1ca2a233ab39f6f5423fc61639206797fd27fce9e` (diagnostics build v5)
 **Diagnosed so far:** v1 copied `libmialgo*` only → still aborted; v2 added a dependency closure but skipped `/vendor|/odm` deps (bug); v3 added the `public.libraries.txt` overlay + the real private vendor dep closure + bionic `debug.ld` logging; v4 (current) expands to a 5-pass closure with `vndk-sp`/`vndk-30..36` scan dirs and writes a `MISSING_DEPS:` audit line so the next diag names any still-unresolvable soname
-**Releases page:** only `build-20261125-140042` is published (Latest). All earlier crashing builds + their tags were deleted from the repo on 2026-11-25 — they survive only as history below.
+**Releases page:** only `build-20261125-142811` is published (Latest). All earlier crashing builds + their tags were deleted from the repo on 2026-11-25 — they survive only as history below.
 **Earlier attempts (now removed):** `build-20261125-124558` (algo blobs only), `build-20261125-123507` (stock), `build-20261125-122038` (patched), `build-20261125-130801` (bridge v1), `build-20261125-132712` (bridge v3)
+
+## v5 diagnostics (build-20261125-142811) — why the previous logs were useless
+
+Three defects made every earlier "proof" circular, all fixed in v5:
+
+1. **`debug.ld.app.<pkg>` was a typo.** bionic reads `debug.ld.<process>`/`debug.ld.all`; the key we set matched nothing, so no `dlopen failed:` line was ever printed. Now `debug.ld.all` + `debug.ld.<pkg>` + `debug.ld.zygote64`, applied in `post-fs-data` (before zygote, which caches the value) and logged to `logs/boot.log`.
+2. **The crash was diagnosed from an uncleared buffer.** The Action button now clears `logcat -b all`, relaunches the camera, waits 12 s, then dumps — so the linker line cannot scroll away.
+3. **`MISSING_DEPS:none` was meaningless.** `sonames()` scraped printable `lib*.so` substrings out of the whole binary (not `DT_NEEDED`), and any dep found on `/system*` was skipped. v5 parses the real `.dynamic`/`.dynstr` sections with `dd`+`od`+`tr` (`module/bin/elf_needed.sh`, no readelf/awk/python on device) and reports three buckets: `IN-CLOSURE`, `ASSUMED_SYSTEM` (only resolvable if already loaded in the process), `UNRESOLVED`. The parser is verified **120/120 against binutils `readelf`** by `tests/test_elf_needed.py`.
+
+Also note: "vendor public libs already has all 5 mialgo entries" is **not independent evidence** — this module ships `/system/vendor/etc/public.libraries.txt` (appending those sonames), so the diag was reading our own overlay back. The new report prints whether the module ships that overlay.
+
+Behaviour change (defensible without device logs): vendor blobs are no longer mirrored into `/system/lib64`. A blob resolved inside the system namespace cannot reach its private `/vendor` dependencies, so that copy could only shadow the working set.
+
+**Evidence produced by the Action button:**
+`/sdcard/Download/GoldStock-diag-<ts>.txt` (readable summary: linker hits, per-NEEDED resolution table, namespace reachability, sha256 of every copy) and `/sdcard/Download/GoldStock-evidence-<ts>.tar.gz` (raw `logcat -b all`, crash buffer, `ld.config.txt`, ELF reports, the blobs themselves, bridge log).
 
 ## Confirmed crash root cause (device diag bundle, 2026-11-25)
 
@@ -28,7 +43,7 @@ If the audit (`Action` button → "algo library audit") shows no `libmialgo*` bl
 **PHASE1_TAG:** `build-20261125-122038` · **SHA-256:** `2d3f1997df46d6e5bc722953b9f30a1ce6f4ba80d1ea18c10162c12ac3779c70`
 
 **Google Drive release copy (current):**
-- [`Gold-Stock.zip`](https://drive.google.com/file/d/1Dr88e9cZH8f7f4QwNxCq36i9E-WYABYY/view?usp=drivesdk) — id `1Dr88e9cZH8f7f4QwNxCq36i9E-WYABYY`, 202,748,885 bytes (v4: 5-pass vendor dep closure + vndk scan dirs + `MISSING_DEPS` audit)
+- [`Gold-Stock.zip`](https://drive.google.com/file/d/1o9M7_gmAuYoLSCEpxI2tNA-JM05od8MA/view?usp=drivesdk) — id `1o9M7_gmAuYoLSCEpxI2tNA-JM05od8MA`, 202,754,722 bytes (v5: proven DT_NEEDED parser + launch reproduction + evidence archive)
 - [`Gold-Stock.zip.sha256`](https://drive.google.com/file/d/1aGUY_mBPToHcGEPUSR1VXiuno9f5LLBf/view?usp=drivesdk) — id `1aGUY_mBPToHcGEPUSR1VXiuno9f5LLBf`
 - Both are **private (owner-only)**, matching the existing `HyperOS-Cam-AOSP-...-universal.zip` on your Drive — share as "anyone with the link" when you publish.
 **Source APK:** Drive `Gold-Stock` (id `1h7ugBvYZAJ05lIqT63opXrOt5dztcGMX`, 182,801,464 bytes) → `com.android.camera`, **versionName 6.1.000660.1** (code 610006601), minSdk 29 / targetSdk 34.
