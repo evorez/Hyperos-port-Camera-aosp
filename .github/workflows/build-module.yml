@@ -210,7 +210,7 @@ jobs:
         run: ./build.sh --allow-no-apk --output dist/template-dryrun.zip
 
   build-flashable-zip:
-    if: github.event_name == 'workflow_dispatch' && inputs.verify_tag == '' && inputs.sync_release_tag == '' && !inputs.inspect_apk_libs
+    if: github.event_name == 'workflow_dispatch' && inputs.verify_tag == '' && inputs.sync_release_tag == ''
     needs: test-and-validate
     runs-on: ubuntu-latest
     permissions:
