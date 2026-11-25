@@ -84,6 +84,12 @@ DIAG_FILE="$DIAG_DIR/GoldStock-diag-$(date +%Y%m%d-%H%M%S).txt"
   done
   echo "  in app lib dir:"
   ls -l /system/priv-app/MiuiCamera/lib/arm64/ 2>/dev/null | grep -iE "mialgo|algoup" | sed "s/^/    /" || echo "    (none)"
+  echo "--- install-time algo bridge log ---"
+  cat "/data/adb/modules/${MODULE_ID:-hyperos_cam_aosp}/algo_bridge.log" 2>/dev/null | tail -n 40 || echo "    (no bridge log)"
+  echo "--- vendor public libraries mentioning algo/mialgo ---"
+  grep -iE "mialgo|algoup|algo" /vendor/etc/public.libraries.txt 2>/dev/null | head -n 10 || echo "    (none)"
+  echo "--- SELinux denials (camera) ---"
+  logcat -d -b all -t 800 2>/dev/null | grep "avc:" | grep -iE "camera|vendor_file|mialgo" | tail -n 15 || echo "    (none)"
   echo "--- mounted module files ---"
   ls -l /system/priv-app/MiuiCamera/ 2>/dev/null | head -n 10
   ls -l /system/etc/permissions/ 2>/dev/null | grep -i camera

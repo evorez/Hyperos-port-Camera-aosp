@@ -165,41 +165,107 @@ fi
 # partition (com.xiaomi.engine.MiCamAlgoInterfaceJNI -> dlopen). AOSP/LineageOS
 # ROMs usually still carry those blobs under /vendor/lib64 or /odm/lib64 but the
 # camera app cannot reach them from its own linker namespace, which aborts the
-# process at startup with "open libmialgoengine.so failed!". Copy every matching
-# vendor blob into the app's private lib dir so dlopen resolves it locally.
-ui_print "- Bridging HyperOS vendor algorithm libraries (libmialgo*)..."
+# process at startup with "open libmialgoengine.so failed!".
+# We therefore copy the blobs AND their DT_NEEDED dependency closure into the
+# app's private lib dir (in-namespace) plus /system/lib64.
+ui_print "- Bridging HyperOS vendor algorithm libraries (libmialgo* + deps)..."
+
 ALGO_LIB_DIR="$MODPATH/system/priv-app/MiuiCamera/lib/arm64"
 ALGO_LIB_DIR_ALT="$MODPATH/system/lib64"
-ALGO_COUNT=0
-ALGO_FOUND=""
+ALGO_LOG="$MODPATH/algo_bridge.log"
+SCAN_DIRS="/vendor/lib64 /odm/lib64 /system/vendor/lib64 /vendor/lib64/camera /odm/lib64/camera /system_ext/lib64 /product/lib64 /vendor/lib64/hw /odm/lib64/hw"
+SYSTEM_LIB_DIRS="/system/lib64 /system_ext/lib64 /product/lib64 /vendor/lib64 /odm/lib64"
+ALGO_DEPS="./libmialgoengine.so ./libmialgo_basic.so ./libmialgo_utils.so ./libmialgo_noise.so ./libmialgo_processing.so"
 
-for src_dir in /vendor/lib64 /odm/lib64 /system/vendor/lib64 /vendor/lib64/camera \
-               /odm/lib64/camera /system_ext/lib64 /product/lib64; do
-  [ -d "$src_dir" ] || continue
-  for pattern in "libmialgo*.so" "libmialgo*.so.*" "libcamera_algoup*.so" \
-                 "libcam_algoup*.so" "libmtkcam_algo*.so" "libcam.algo*.so"; do
-    for lib in "$src_dir"/$pattern; do
+mkdir -p "$ALGO_LIB_DIR" "$ALGO_LIB_DIR_ALT"
+{
+  echo "=== Gold-Stock algo bridge log ($(date)) ==="
+  echo "scan dirs: $SCAN_DIRS"
+} > "$ALGO_LOG"
+
+algo_count=0
+
+# find_lib <soname> -> prints full path of the first matching vendor blob
+find_lib() {
+  _want="$1"
+  for _d in $SCAN_DIRS; do
+    [ -f "$_d/$_want" ] && { echo "$_d/$_want"; return 0; }
+  done
+  return 1
+}
+
+in_system() {
+  _w="$1"
+  for _d in $SYSTEM_LIB_DIRS; do
+    [ -f "$_d/$_w" ] && return 0
+  done
+  return 1
+}
+
+# sonames <file> -> lib*.so tokens referenced by the ELF (approximates DT_NEEDED)
+sonames() {
+  # portable binary-safe soname extraction (busybox grep has no reliable -a)
+  tr -c '[:print:]' '\n' < "$1" 2>/dev/null | grep -oE 'lib[A-Za-z0-9_.+-]+\.so' | sort -u
+}
+
+copy_lib() {
+  _src="$1"
+  _name="${_src##*/}"
+  [ -f "$ALGO_LIB_DIR/$_name" ] && return 1
+  cp -f "$_src" "$ALGO_LIB_DIR/$_name" 2>/dev/null || return 1
+  cp -f "$_src" "$ALGO_LIB_DIR_ALT/$_name" 2>/dev/null || true
+  algo_count=$((algo_count + 1))
+  ui_print "  + $_name (from ${_src%/*})"
+  echo "copied $_name <- $_src" >> "$ALGO_LOG"
+  return 0
+}
+
+# Seed: the algo engine itself and its well-known companions
+for seed in $ALGO_DEPS; do
+  src="$(find_lib "${seed#./}")" || continue
+  copy_lib "$src"
+done
+
+# Also seed every libmialgo*/algoup* blob present on the ROM
+for _d in $SCAN_DIRS; do
+  for pattern in "libmialgo*.so" "libcamera_algoup*.so" "libcam_algoup*.so" "libmtkcam_algo*.so" "libcam.algo*.so"; do
+    for lib in "$_d"/$pattern; do
       [ -f "$lib" ] || continue
-      lib_name="${lib##*/}"
-      [ -f "$ALGO_LIB_DIR/$lib_name" ] && continue
-      mkdir -p "$ALGO_LIB_DIR" "$ALGO_LIB_DIR_ALT"
-      if cp -f "$lib" "$ALGO_LIB_DIR/$lib_name" 2>/dev/null; then
-        cp -f "$lib" "$ALGO_LIB_DIR_ALT/$lib_name" 2>/dev/null || true
-        ALGO_COUNT=$((ALGO_COUNT + 1))
-        ALGO_FOUND="$ALGO_FOUND $lib_name"
-        ui_print "  + $lib_name (from $src_dir)"
-      fi
+      copy_lib "$lib"
     done
   done
 done
 
-if [ "$ALGO_COUNT" -gt 0 ]; then
-  ui_print "  Bridged $ALGO_COUNT vendor algo lib(s):$ALGO_FOUND"
+# Dependency closure (3 passes): pull every lib*.so a copied blob depends on
+pass=1
+while [ "$pass" -le 3 ]; do
+  pass_added=0
+  for lib in "$ALGO_LIB_DIR"/*.so; do
+    [ -f "$lib" ] || continue
+    for dep in $(sonames "$lib"); do
+      [ -f "$ALGO_LIB_DIR/$dep" ] && continue
+      in_system "$dep" && continue
+      dep_src="$(find_lib "$dep")" || continue
+      if copy_lib "$dep_src"; then
+        pass_added=$((pass_added + 1))
+        echo "  dep of ${lib##*/}: $dep" >> "$ALGO_LOG"
+      fi
+    done
+  done
+  echo "pass $pass: +$pass_added libs" >> "$ALGO_LOG"
+  [ "$pass_added" -eq 0 ] && break
+  pass=$((pass + 1))
+done
+
+if [ "$algo_count" -gt 0 ]; then
+  ui_print "  Bridged $algo_count vendor lib(s) (incl. dependency closure)"
+  echo "total: $algo_count" >> "$ALGO_LOG"
 else
-  ui_print "  ! No libmialgo* vendor blob found on this ROM."
+  ui_print "  ! No libmialgo* vendor blob found on this ROM ($algo_count copied)."
   ui_print "    The stock camera aborts in MiCameraAlgo.init without libmialgoengine.so."
   ui_print "    Fix: pull libmialgoengine.so (+ libmialgo_basic/utils/noise) from your"
-  ui_print "    HyperOS ROM's /vendor/lib64 and drop them into input/lib64/, then rebuild."
+  ui_print "    HyperOS ROM /vendor/lib64 into input/lib64/ and rebuild."
+  echo "total: 0 (no blobs found)" >> "$ALGO_LOG"
 fi
 
 # 7. Set strict permissions & SELinux contexts
