@@ -161,6 +161,9 @@ def try_confirm_form(op, file_id: str, out: Path) -> bool:
         out.write_bytes(body)
         return zipfile.is_zipfile(out)
 
+    text = " ".join(re.sub(r"<[^>]+>", " ", body.decode("utf-8", "ignore")).split())
+    annotate("warning", f"Drive interstitial text: {text[:400]}")
+
     parser = FormParser()
     parser.feed(body.decode("utf-8", "ignore"))
     action = parser.action or base
@@ -211,10 +214,16 @@ def try_gdown(file_id: str, out: Path) -> bool:
         annotate("warning", f"gdown install failed: {type(exc).__name__}: {exc}")
         return False
     try:
-        subprocess.run(
+        proc = subprocess.run(
             [sys.executable, "-m", "gdown", f"https://drive.google.com/uc?id={file_id}", "-O", str(out)],
-            check=True,
+            check=False,
+            capture_output=True,
+            text=True,
         )
+        if proc.returncode != 0:
+            tail = " ".join((proc.stderr or proc.stdout or "").split())[-400:]
+            annotate("warning", f"gdown exit={proc.returncode}: {tail}")
+            return False
         return zipfile.is_zipfile(out)
     except Exception as exc:  # noqa: BLE001
         annotate("warning", f"gdown failed: {type(exc).__name__}: {exc}")
