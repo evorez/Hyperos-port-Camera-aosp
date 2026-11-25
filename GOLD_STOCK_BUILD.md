@@ -1,10 +1,10 @@
 # Gold-Stock — HyperOS Camera for AOSP Android 16
 
 **Deliverable:** [`Gold-Stock.zip`](https://github.com/evorez/Hyperos-port-Camera-aosp/releases/latest/download/Gold-Stock.zip) — Magisk / KernelSU / KernelSU-Next / APatch flashable module (193 MB, 57 entries).
-**Build (current):** v6 diagnostics · SHA-256 `4ade8119fbd26ce5ab84bd606774fd160586ec53d05d2e5ce826f3b5bade4c32` · 202,755,350 bytes
-**GitHub Release:** asset upload is currently rejected by GitHub (uploads endpoint EOF / Releases API 500-502 during the 2026-11-25 incident). The ZIP is delivered via Drive; the release will be re-published when the API recovers. Verified facts are unchanged.
+**Release tag (current):** `build-20261125-162525` · SHA-256 `4ade8119fbd26ce5ab84bd606774fd160586ec53d05d2e5ce826f3b5bade4c32` · 202,755,350 bytes (v6 diagnostics)
+**Delivery:** GitHub Release only — the user asked for no Drive copies (`Google Drive release copy` below is historical; the v6 Drive upload was trashed).
 **Diagnosed so far:** v1 copied `libmialgo*` only → still aborted; v2 added a dependency closure but skipped `/vendor|/odm` deps (bug); v3 added the `public.libraries.txt` overlay + the real private vendor dep closure + bionic `debug.ld` logging; v4 (current) expands to a 5-pass closure with `vndk-sp`/`vndk-30..36` scan dirs and writes a `MISSING_DEPS:` audit line so the next diag names any still-unresolvable soname
-**Releases page:** `build-20261125-142811` (v5) is still the published Latest; v6 could not be published because of the GitHub API incident. All earlier crashing builds + their tags were deleted from the repo on 2026-11-25 — they survive only as history below.
+**Releases page:** only `build-20261125-162525` (v6) is published (Latest). All earlier crashing builds + their tags were deleted from the repo on 2026-11-25 — they survive only as history below.
 **Earlier attempts (now removed):** `build-20261125-124558` (algo blobs only), `build-20261125-123507` (stock), `build-20261125-122038` (patched), `build-20261125-130801` (bridge v1), `build-20261125-132712` (bridge v3)
 
 ## v6 findings (proven without the device)
@@ -54,7 +54,7 @@ If the audit (`Action` button → "algo library audit") shows no `libmialgo*` bl
 **PHASE1_TAG:** `build-20261125-122038` · **SHA-256:** `2d3f1997df46d6e5bc722953b9f30a1ce6f4ba80d1ea18c10162c12ac3779c70`
 
 **Google Drive release copy (current):**
-- [`Gold-Stock.zip`](https://drive.google.com/file/d/14YweHa9_Hm0dZrvTIG5Y5-E5XDhsCHIo/view?usp=drivesdk) — id `14YweHa9_Hm0dZrvTIG5Y5-E5XDhsCHIo`, 202,755,350 bytes, SHA-256 `4ade8119fbd2…` (v6: auto-captures the crash evidence on boot, no Action button needed)
+- v6 is **not** on Drive (by request): https://github.com/evorez/Hyperos-port-Camera-aosp/releases/tag/build-20261125-162525
 - [`Gold-Stock.zip.sha256`](https://drive.google.com/file/d/1aGUY_mBPToHcGEPUSR1VXiuno9f5LLBf/view?usp=drivesdk) — id `1aGUY_mBPToHcGEPUSR1VXiuno9f5LLBf`
 - Both are **private (owner-only)**, matching the existing `HyperOS-Cam-AOSP-...-universal.zip` on your Drive — share as "anyone with the link" when you publish.
 **Source APK:** Drive `Gold-Stock` (id `1h7ugBvYZAJ05lIqT63opXrOt5dztcGMX`, 182,801,464 bytes) → `com.android.camera`, **versionName 6.1.000660.1** (code 610006601), minSdk 29 / targetSdk 34.
