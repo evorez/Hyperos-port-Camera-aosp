@@ -45,6 +45,10 @@ on:
         description: "Optional: stream an existing release tag ZIP directly to Google Drive (skips build)"
         required: false
         default: ""
+      verify_tag:
+        description: "Verify an existing release tag (checksum + module + APK + patch symbol). Skips building."
+        required: false
+        default: ""
       output_name:
         description: "Output ZIP filename inside dist/ (default: Gold-Stock.zip)"
         required: false
@@ -122,7 +126,7 @@ jobs:
         run: ./build.sh --allow-no-apk --output dist/template-dryrun.zip
 
   build-flashable-zip:
-    if: github.event_name == 'workflow_dispatch'
+    if: github.event_name == 'workflow_dispatch' && inputs.verify_tag == ''
     needs: test-and-validate
     runs-on: ubuntu-latest
     permissions:
@@ -378,3 +382,108 @@ jobs:
           gh release create "$TAG" "$ZIP_FILE" "$SHA_FILE" \
             --title "Gold-Stock - HyperOS Camera for AOSP Android 16 (${SHA_SUM:0:12})" \
             --notes-file /tmp/release_notes.md
+
+  verify-release:
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.verify_tag != '' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Download release assets
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ inputs.verify_tag }}
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/rel
+          gh release download "$TAG" -R "$GITHUB_REPOSITORY" -p '*.zip' -p '*.sha256' -D /tmp/rel
+          ls -lh /tmp/rel
+
+      - name: Check published SHA-256 against the downloaded file
+        run: |
+          set -euo pipefail
+          cd /tmp/rel
+          sha256sum -c ./*.zip.sha256
+          echo "::notice::SHA-256 matches the published checksum"
+
+      - name: Validate flashable module structure
+        run: |
+          set -euo pipefail
+          ZIP="$(ls /tmp/rel/*.zip | head -n 1)"
+          python3 tools/validate_module.py "$ZIP"
+
+      - name: Inspect bundled APK, libs, permissions and applied patch symbol
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          ZIP="$(ls /tmp/rel/*.zip | head -n 1)"
+          python3 - "$ZIP" <<'PY'
+          import os, sys, zipfile, tempfile, pathlib
+          sys.path.insert(0, "tools")
+          from axml_inspector import inspect_apk
+
+          EXPECT = ["get60FpsOperatingMode", "modify/AdditionalToolsConfig"]
+          zip_path = pathlib.Path(sys.argv[1])
+          lines = ["### Gold-Stock release verification", "",
+                   f"ZIP: `{zip_path.name}` ({zip_path.stat().st_size:,} bytes)"]
+          with zipfile.ZipFile(zip_path) as zf:
+              names = zf.namelist()
+              lines.append(f"- ZIP entries: **{len(names)}**")
+              for line in zf.read("module.prop").decode("utf-8", "ignore").splitlines():
+                  if line.startswith(("id=", "name=", "version=", "versionCode=")):
+                      lines.append(f"- module.prop `{line}`")
+              apks = [n for n in names if n.endswith(".apk")]
+              libs = [n for n in names if n.endswith(".so")]
+              perms = [n for n in names if n.startswith("system/etc/")]
+              lines += [f"- bundled APK(s): {', '.join(apks) or 'NONE'}",
+                        f"- extracted native libs: **{len(libs)}**",
+                        f"- system/etc XMLs: **{len(perms)}**"]
+              if apks:
+                  with tempfile.TemporaryDirectory() as tmp:
+                      apk_path = pathlib.Path(tmp) / "cam.apk"
+                      apk_path.write_bytes(zf.read(apks[0]))
+                      info = inspect_apk(apk_path)
+                      lines += [f"- APK package: `{info.package}`",
+                                f"- APK versionName: `{info.version_name}` (code `{info.version_code}`)",
+                                f"- APK SDK: min `{info.min_sdk}` / target `{info.target_sdk}`"]
+                      found_all = True
+                      with zipfile.ZipFile(apk_path) as azf:
+                          dexes = [(n, azf.read(n)) for n in azf.namelist() if n.endswith(".dex")]
+                      for sym in EXPECT:
+                          hit = [n for n, blob in dexes if sym.encode() in blob]
+                          if hit:
+                              lines.append(f"- patch symbol `{sym}` found in {', '.join(hit)} ✅")
+                          else:
+                              found_all = False
+                              lines.append(f"- patch symbol `{sym}` **missing** ❌")
+                      if not found_all:
+                          print("::error::expected patch symbols missing from shipped DEX")
+          print("\n".join(lines))
+          pathlib.Path("/tmp/verify.md").write_text("\n".join(lines) + "\n", encoding="utf-8")
+          PY
+          cat /tmp/verify.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Publish verification summary as annotations
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          grep -E '^- ' /tmp/verify.md | sed -e 's/[`*]//g' | while IFS= read -r line; do
+            echo "::notice::${line:0:600}"
+          done || true
+          {
+            echo "### Gold-Stock verification (\`${{ inputs.verify_tag }}\`)"
+            echo
+            cat /tmp/verify.md
+          } > /tmp/verify_body.md
+          gh api -X POST "repos/${GITHUB_REPOSITORY}/commits/${GITHUB_SHA}/comments" \
+            -F body=@/tmp/verify_body.md >/dev/null 2>&1 || echo "verification comment not posted"
