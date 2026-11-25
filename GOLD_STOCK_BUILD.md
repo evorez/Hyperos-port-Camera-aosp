@@ -1,10 +1,15 @@
 # Gold-Stock — HyperOS Camera for AOSP Android 16
 
 **Deliverable:** [`Gold-Stock.zip`](https://github.com/evorez/Hyperos-port-Camera-aosp/releases/latest/download/Gold-Stock.zip) — Magisk / KernelSU / KernelSU-Next / APatch flashable module (193 MB, 57 entries).
-**Release tag:** `build-20261125-122038` · **SHA-256:** `2d3f1997df46d6e5bc722953b9f30a1ce6f4ba80d1ea18c10162c12ac3779c70`
+**Release tag (current, stock/FC-safe):** `build-20261125-123507` · SHA-256 `58661f71cacfccc704b7e1eb4710249bff367000235f00a772d68dc9c93684f9`
+**Previous build (patched, crashes on launch):** `build-20261125-122038`
 
-**Google Drive release copies:**
-- [`Gold-Stock.zip`](https://drive.google.com/file/d/1Rbhddh14eSOhunLWWq8S0Pu5KaEDRzuh/view?usp=drivesdk) — id `1Rbhddh14eSOhunLWWq8S0Pu5KaEDRzuh`, 202,445,830 bytes (uploaded from the verified GitHub release asset, streamed by the `sync-release-to-gdrive` job)
+> ⚠️ The 60fps smali patch (`patches/gold_stock_61.json`) caused an immediate FC on launch on the tester device, so the current release repackages the **untouched stock APK** (`apply_patches=false`). Re-enable patches only with a crash log to verify.
+
+**PHASE1_TAG:** `build-20261125-122038` · **SHA-256:** `2d3f1997df46d6e5bc722953b9f30a1ce6f4ba80d1ea18c10162c12ac3779c70`
+
+**Google Drive release copy (current):**
+- [`Gold-Stock.zip`](https://drive.google.com/file/d/1qjqpGwPjLXSUHlOpwhdLdR1_w1klG70c/view?usp=drivesdk) — id `1qjqpGwPjLXSUHlOpwhdLdR1_w1klG70c`, 202,746,315 bytes (stock variant; duplicate attempt uploads of the crashing patched build were trashed)
 - [`Gold-Stock.zip.sha256`](https://drive.google.com/file/d/1aGUY_mBPToHcGEPUSR1VXiuno9f5LLBf/view?usp=drivesdk) — id `1aGUY_mBPToHcGEPUSR1VXiuno9f5LLBf`
 - Both are **private (owner-only)**, matching the existing `HyperOS-Cam-AOSP-...-universal.zip` on your Drive — share as "anyone with the link" when you publish.
 **Source APK:** Drive `Gold-Stock` (id `1h7ugBvYZAJ05lIqT63opXrOt5dztcGMX`, 182,801,464 bytes) → `com.android.camera`, **versionName 6.1.000660.1** (code 610006601), minSdk 29 / targetSdk 34.
