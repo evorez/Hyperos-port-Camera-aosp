@@ -97,6 +97,49 @@ def grep_binary_strings(apk: Path, members: List[str], pattern: str) -> int:
     return total
 
 
+def scan_assets(apk: Path, probes: List[Dict[str, str]], md: List[str]) -> None:
+    """List asset entries and grep text-ish assets for feature/probe keys."""
+    with zipfile.ZipFile(apk) as zf:
+        assets = [n for n in zf.namelist() if n.startswith("assets/") and not n.endswith("/")]
+        md.append(f"- asset files: **{len(assets)}**")
+        text_assets = [a for a in assets if a.rsplit(".", 1)[-1].lower() in
+                       {"json", "xml", "txt", "cfg", "conf", "properties", "proto"}]
+        md.append(f"- text-ish assets: {len(text_assets)}")
+        md.append("")
+        if assets:
+            md.append("#### asset listing")
+            for a in assets:
+                md.append(f"- `{a}` ({zf.getinfo(a).file_size:,} B)")
+            md.append("")
+
+        for probe in probes:
+            pid = probe.get("id", "probe")
+            pattern = probe["pattern"]
+            rx = _probe_regex(pattern)
+            hits: List[str] = []
+            for name in text_assets:
+                try:
+                    text = zf.read(name).decode("utf-8", errors="ignore")
+                except Exception:  # noqa: BLE001
+                    continue
+                for m in rx.finditer(text):
+                    ls = text.rfind("\n", 0, m.start()) + 1
+                    le = text.find("\n", m.end())
+                    line = text[ls:le if le != -1 else len(text)].strip()[:SNIPPET]
+                    hits.append(f"`{name}`: `{line}`")
+                    if len(hits) >= MAX_EXAMPLES * 3:
+                        break
+                if len(hits) >= MAX_EXAMPLES * 3:
+                    break
+            if not hits:
+                md.append(f"- `{pid}` — **no asset match** (pattern `{pattern}`)")
+                continue
+            md.append(f"- `{pid}` — {len(hits)} asset line(s) match `{pattern}`")
+            for h in hits[:MAX_EXAMPLES]:
+                md.append(f"    - {h}")
+        md.append("")
+
+
 def main(argv: List[str]) -> int:
     ap = argparse.ArgumentParser(description="Recon smali/resources for patch anchors.")
     ap.add_argument("apk")
@@ -121,6 +164,13 @@ def main(argv: List[str]) -> int:
         md.append("")
 
         for group in groups:
+            if group.get("where") == "assets":
+                md.append(f"#### {group.get('id', 'assets')}")
+                if group.get("description"):
+                    md.append(group["description"])
+                md.append("")
+                scan_assets(apk, group.get("probes", []), md)
+                continue
             md.append(f"#### {group.get('id', 'group')}")
             if group.get("description"):
                 md.append(group["description"])

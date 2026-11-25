@@ -3,71 +3,64 @@
   "notes": "Used by tools/smali_recon.py to locate the real anchors of a camera build whose smali differs from patches/unlock_features.json (e.g. 6.1.000660.1).",
   "groups": [
     {
-      "id": "settings_and_credits",
-      "description": "Universal/Lab settings entries and third-party credit labels",
+      "id": "assets_feature_config",
+      "where": "assets",
+      "description": "Feature gating config inside APK assets (zoom / fps / EIS / SAT / quality)",
       "probes": [
-        { "id": "universal_settings_flag", "pattern": "isSupportUniversalSettings" },
-        { "id": "universal_pref_key", "pattern": "pref_universal" },
-        { "id": "lab_pref_key", "pattern": "pref_lab" },
-        { "id": "holybear", "pattern": "HolyBear" },
-        { "id": "sevtinge", "pattern": "sevtinge" },
-        { "id": "itzdfplayer", "pattern": "itzdfplayer" },
-        { "id": "telegram_links", "pattern": "t\\.me/[A-Za-z0-9_]+" },
-        { "id": "privacy_pref", "pattern": "pref_privacy" }
+        {
+          "id": "zoom_keys",
+          "pattern": "zoom"
+        },
+        {
+          "id": "fps_keys",
+          "pattern": "60fps|fps"
+        },
+        {
+          "id": "eis_keys",
+          "pattern": "eis"
+        },
+        {
+          "id": "sat_keys",
+          "pattern": "sat|SAT"
+        },
+        {
+          "id": "quality_keys",
+          "pattern": "quality"
+        },
+        {
+          "id": "bitrate_keys",
+          "pattern": "bitrate"
+        },
+        {
+          "id": "mfnr_keys",
+          "pattern": "mfnr"
+        },
+        {
+          "id": "heic_keys",
+          "pattern": "heic"
+        },
+        {
+          "id": "ultra_keys",
+          "pattern": "ultrawide|ultra"
+        },
+        {
+          "id": "watermark_keys",
+          "pattern": "watermark"
+        }
       ]
     },
     {
-      "id": "watermark",
-      "description": "Watermark text sources (smali + resources.arsc)",
+      "id": "opmode_60fps",
+      "description": "60fps opmode freeze anchors",
       "probes": [
-        { "id": "mi_phone_string", "pattern": "\"MI PHONE\"" },
-        { "id": "mi_phone_any", "pattern": "MI PHONE" },
-        { "id": "watermark_class", "pattern": "WaterMark|watermark" },
-        { "id": "leica_string", "pattern": "Leica" },
-        { "id": "arsc_mi_phone", "pattern": "MI PHONE", "where": "arsc" },
-        { "id": "arsc_leica", "pattern": "Leica", "where": "arsc" }
-      ]
-    },
-    {
-      "id": "zoom",
-      "description": "Zoom range / 100x / 0.5x ultra-wide anchors",
-      "probes": [
-        { "id": "supported_zoom_method", "pattern": "SupportedZoom|supportZoom" },
-        { "id": "zoom_ratio_field", "pattern": "ZOOM_RATIO|zoomRatio" },
-        { "id": "max_zoom_100", "pattern": "0x64\\b.*zoom|zoom.*0x64\\b" },
-        { "id": "min_zoom_05", "pattern": "0x3f000000" },
-        { "id": "ultra_wide", "pattern": "ULTRA_WIDE|ultraWide|ULTRA_PIXEL|back_ultra" },
-        { "id": "tele_photo", "pattern": "TELE_PHOTO|telePhoto|telephoto" },
-        { "id": "dataitem_zoom", "pattern": "DataItem.*ZOOM|ZOOM_.*DataItem" },
-        { "id": "zoom_manager", "pattern": "ZoomManager|zoomManager" }
-      ]
-    },
-    {
-      "id": "video_60fps_eis",
-      "description": "60fps freeze / opmode / EIS / VideoSAT anchors",
-      "probes": [
-        { "id": "hsr60", "pattern": "HSR60" },
-        { "id": "opmode_803c", "pattern": "0x803c" },
-        { "id": "opmode_hex_list", "pattern": "const/16 v[0-9]+, 0x8[0-9a-f]{3}" },
-        { "id": "video_sat", "pattern": "VideoSAT" },
-        { "id": "super_eis", "pattern": "SuperEIS|superEis" },
-        { "id": "eis_flag", "pattern": "isSupportEIS|isEIS|EIS_" },
-        { "id": "60fps", "pattern": "60fps|FPS_60|fps60" },
-        { "id": "1080p60", "pattern": "1080.*60|1080P60" }
-      ]
-    },
-    {
-      "id": "quality_bitrate",
-      "description": "JPEG quality, MFNR/LDC toggles and video bitrate anchors",
-      "probes": [
-        { "id": "jpeg_quality", "pattern": "jpegQuality|JPEG_QUALITY|jpeg_quality" },
-        { "id": "quality_100", "pattern": "const/16 v[0-9]+, 0x64" },
-        { "id": "mfnr", "pattern": "MFNR|mfnr" },
-        { "id": "ldc", "pattern": "isSupportLDC|LDC" },
-        { "id": "video_bitrate", "pattern": "videoBitrate|BITRATE|bitrate" },
-        { "id": "heic", "pattern": "HEIC|heic" },
-        { "id": "ai_ocr", "pattern": "AI_OCR|aiOcr|OCR" },
-        { "id": "hdr_depurple", "pattern": "depurple|Depurple|DEPURPLE" }
+        {
+          "id": "hsr60_context",
+          "pattern": "HSR60"
+        },
+        {
+          "id": "opmode_803c",
+          "pattern": "0x803c"
+        }
       ]
     }
   ]
