@@ -173,7 +173,7 @@ ui_print "- Bridging HyperOS vendor algorithm libraries (libmialgo* + deps)..."
 ALGO_LIB_DIR="$MODPATH/system/priv-app/MiuiCamera/lib/arm64"
 ALGO_LIB_DIR_ALT="$MODPATH/system/lib64"
 ALGO_LOG="$MODPATH/algo_bridge.log"
-SCAN_DIRS="/vendor/lib64 /odm/lib64 /system/vendor/lib64 /vendor/lib64/camera /odm/lib64/camera /system_ext/lib64 /product/lib64 /vendor/lib64/hw /odm/lib64/hw"
+SCAN_DIRS="/vendor/lib64 /odm/lib64 /system/vendor/lib64 /vendor/lib64/camera /odm/lib64/camera /system_ext/lib64 /product/lib64 /vendor/lib64/hw /odm/lib64/hw /vendor/lib64/vndk-sp /odm/lib64/vndk-sp /vendor/lib64/vndk-30 /vendor/lib64/vndk-31 /vendor/lib64/vndk-32 /vendor/lib64/vndk-33 /vendor/lib64/vndk-34 /vendor/lib64/vndk-35 /vendor/lib64/vndk-36"
 SYSTEM_LIB_DIRS="/system/lib64 /system_ext/lib64 /product/lib64 /apex/com.android.runtime/lib64"
 ALGO_DEPS="./libmialgoengine.so ./libmialgo_basic.so ./libmialgo_utils.so ./libmialgo_noise.so ./libmialgo_processing.so"
 
@@ -236,9 +236,9 @@ for _d in $SCAN_DIRS; do
   done
 done
 
-# Dependency closure (3 passes): pull every lib*.so a copied blob depends on
+# Dependency closure (5 passes): pull every lib*.so a copied blob depends on
 pass=1
-while [ "$pass" -le 3 ]; do
+while [ "$pass" -le 5 ]; do
   pass_added=0
   for lib in "$ALGO_LIB_DIR"/*.so; do
     [ -f "$lib" ] || continue
@@ -287,6 +287,26 @@ for lib in "$ALGO_LIB_DIR"/*.so; do
 done
 ui_print "  Public vendor libs exposed: $PLF_ADDED"
 echo "public libs added: $PLF_ADDED" >> "$ALGO_LOG"
+
+# Post-closure audit: name every soname that is still unresolvable anywhere.
+# This turns "open libmialgoengine.so failed!" into an exact missing-library list.
+MISSING_DEPS=""
+for lib in "$ALGO_LIB_DIR"/*.so; do
+  [ -f "$lib" ] || continue
+  for dep in $(sonames "$lib"); do
+    [ -f "$ALGO_LIB_DIR/$dep" ] && continue
+    in_system "$dep" && continue
+    find_lib "$dep" >/dev/null && continue
+    MISSING_DEPS="$MISSING_DEPS $dep"
+  done
+done
+MISSING_DEPS="$(echo "$MISSING_DEPS" | tr ' ' '\n' | sort -u | tr '\n' ' ')"
+if [ -n "$(echo "$MISSING_DEPS" | tr -d ' ')" ]; then
+  ui_print "  ! Unresolvable dependencies: $MISSING_DEPS"
+  echo "MISSING_DEPS:$MISSING_DEPS" >> "$ALGO_LOG"
+else
+  echo "MISSING_DEPS:none" >> "$ALGO_LOG"
+fi
 
 if [ "$algo_count" -gt 0 ]; then
   ui_print "  Bridged $algo_count vendor lib(s) (incl. dependency closure)"
