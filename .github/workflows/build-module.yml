@@ -429,6 +429,12 @@ jobs:
           trap diag ERR
           ./build.sh --output "dist/${OUTPUT_NAME:-Gold-Stock.zip}" 2>&1 | tee /tmp/build.log
           ls -lh dist/
+          # Publish the checksum as a check-run annotation: the only log channel that
+          # is readable from outside when the Releases API is degraded.
+          BUILD_SHA="$(sed -n 's/^\[OK\] SHA-256   : //p' /tmp/build.log | tail -n 1)"
+          BUILD_BYTES="$(stat -c %s "dist/${OUTPUT_NAME:-Gold-Stock.zip}" 2>/dev/null || echo '?')"
+          echo "::notice::ZIP SHA-256 ${BUILD_SHA:-unknown} bytes=${BUILD_BYTES} file=${OUTPUT_NAME:-Gold-Stock.zip}"
+          echo "SHA256=${BUILD_SHA:-unknown} bytes=${BUILD_BYTES}" > /tmp/build_sha.env
 
       - name: Upload flashable module ZIP artifact
         if: ${{ inputs.inspect_only != true }}
