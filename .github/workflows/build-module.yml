@@ -439,7 +439,18 @@ jobs:
             dist/*.zip
             dist/*.zip.sha256
 
+      - name: Stream ZIP to Google Drive (when a session URI is supplied)
+        if: ${{ inputs.gdrive_upload_uri != '' }}
+        env:
+          GDRIVE_UPLOAD_URI: ${{ inputs.gdrive_upload_uri }}
+        run: |
+          set -Eeuo pipefail
+          echo "::add-mask::$GDRIVE_UPLOAD_URI"
+          ZIP_FILE="$(ls -1 dist/*.zip | head -n 1)"
+          python3 tools/gdrive_upload_resumable.py --uri "$GDRIVE_UPLOAD_URI" --file "$ZIP_FILE"
+
       - name: Publish GitHub Release for direct download
+        continue-on-error: true
         if: ${{ inputs.inspect_only != true && inputs.publish_release == true }}
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
