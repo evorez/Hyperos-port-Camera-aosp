@@ -3,9 +3,8 @@
 **Deliverable:** [`Gold-Stock.zip`](https://github.com/evorez/Hyperos-port-Camera-aosp/releases/latest/download/Gold-Stock.zip) — Magisk / KernelSU / KernelSU-Next / APatch flashable module (193 MB, 57 entries).
 **Release tag (current):** `build-20261125-140042` · SHA-256 `7d0fd7b2c40d671283c4a7a29b773ef0079f9c3afdeb74751fe726f1a89eb171`
 **Diagnosed so far:** v1 copied `libmialgo*` only → still aborted; v2 added a dependency closure but skipped `/vendor|/odm` deps (bug); v3 added the `public.libraries.txt` overlay + the real private vendor dep closure + bionic `debug.ld` logging; v4 (current) expands to a 5-pass closure with `vndk-sp`/`vndk-30..36` scan dirs and writes a `MISSING_DEPS:` audit line so the next diag names any still-unresolvable soname
-**Earlier attempts:** `build-20261125-124558` (algo blobs only), `build-20261125-123507` (stock), `build-20261125-122038` (patched)
-**Previous:** `build-20261125-123507` (stock, crashed on launch — libmialgoengine.so), `build-20261125-122038` (patched, crashed on launch)
-**Previous build (patched, crashes on launch):** `build-20261125-122038`
+**Releases page:** only `build-20261125-140042` is published (Latest). All earlier crashing builds + their tags were deleted from the repo on 2026-11-25 — they survive only as history below.
+**Earlier attempts (now removed):** `build-20261125-124558` (algo blobs only), `build-20261125-123507` (stock), `build-20261125-122038` (patched), `build-20261125-130801` (bridge v1), `build-20261125-132712` (bridge v3)
 
 ## Confirmed crash root cause (device diag bundle, 2026-11-25)
 
