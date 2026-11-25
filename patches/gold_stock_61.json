@@ -1,0 +1,22 @@
+{
+  "name": "Gold-Stock (HyperOS Camera 6.1.000660.1) - AOSP port patches",
+  "target": "MiuiCamera.apk (com.android.camera - 6.1.000660.1, HyperOS stock base)",
+  "notes": "The stock 6.1 APK is NOT the Evorez/Universal modded 5.0 base that patches/unlock_features.json was written for: it has no modify/'d/c/a/g6/b/f.smali' classes, no Universal/Lab settings, no HolyBear/Sevtinge/ItzDFPlayer credit labels, no 'MI PHONE' watermark string and no com/mi/device/Common.smali feature-flag class. Rules that only exist to reshape that modded base therefore cannot apply. This spec keeps the patches that are meaningful on the stock 6.1 base and are anchored to symbols verified by tools/smali_recon.py.",
+  "patches": [
+    {
+      "id": "compile_evorez_ui_and_additional_tools",
+      "type": "compile_java_smali",
+      "java_src_dir": "patches/java",
+      "java_stubs_dir": "patches/java_stubs",
+      "description": "Compile AdditionalToolsConfig / Evorez card classes into smali (provides get60FpsOperatingMode())"
+    },
+    {
+      "id": "fix_60fps_video_opmode_freeze_61",
+      "type": "smali_replace",
+      "class_contains": "b3/a.smali",
+      "find": "const v4, 0x803c",
+      "replace": "invoke-static {}, Lmodify/AdditionalToolsConfig;->get60FpsOperatingMode()I\n\n    move-result v4",
+      "description": "Fix 60fps video freeze on AOSP: replace MIUI HSR60 opmode 0x803c with standard AOSP 0x0 (AdditionalTools default)"
+    }
+  ]
+}
