@@ -76,4 +76,16 @@ fi
   echo "PrivApp List: $(getprop persist.vendor.camera.privapp.list)"
 } > "$LOG_FILE" 2>/dev/null
 
+# ------------------------------------------------------------------------------
+# Auto-capture the camera crash once per boot, so the exact linker error exists
+# on disk even if the user never presses the module's Action button.
+# ------------------------------------------------------------------------------
+BOOT_ID="$(cat /proc/sys/kernel/random/boot_id 2>/dev/null || echo unknown)"
+AUTO_MARKER="$LOG_DIR/.auto_diag_${BOOT_ID}"
+if [ ! -f "$AUTO_MARKER" ] && [ -x "$MODDIR/action.sh" ]; then
+  sleep 20
+  GS_AUTO=1 sh "$MODDIR/action.sh" >> "$LOG_DIR/boot.log" 2>&1
+  touch "$AUTO_MARKER" 2>/dev/null
+fi
+
 exit 0

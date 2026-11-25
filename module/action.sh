@@ -234,6 +234,15 @@ done < "$WORK/libs_found.txt"
   echo "debug.ld.all=$(getprop debug.ld.all)"
   echo "debug.ld.$CAM_PKG=$(getprop "debug.ld.$CAM_PKG")"
   echo ""
+  echo "############################"
+  echo "# TOP FINDING (read this first)"
+  echo "############################"
+  echo "linker-related log lines captured: $(grep -c . "$LINKER_HITS" 2>/dev/null)"
+  head -n 40 "$LINKER_HITS" 2>/dev/null
+  echo ""
+  echo "unresolvable NEEDED edges: $(grep -c 'NOT-FOUND-ANYWHERE' "$REPORT" 2>/dev/null)"
+  grep 'NOT-FOUND-ANYWHERE' "$REPORT" 2>/dev/null | head -n 20
+  echo ""
   echo "--- install health ---"
   echo "APK        : $(pm path "$CAM_PKG" 2>/dev/null | head -n1 || echo NOT-DETECTED)"
   echo "privapp xml: $([ -f /system/etc/permissions/privapp-permissions-miuicamera.xml ] && echo mounted || echo MISSING)"
@@ -253,6 +262,28 @@ done < "$WORK/libs_found.txt"
   echo ""
   echo "--- module overlay of the app dir (magic mount) ---"
   ls -l /data/adb/modules/$MODULE_ID_LOCAL/system/priv-app/MiuiCamera/lib/arm64/ 2>/dev/null | head -n 40
+  echo ""
+  echo "--- where does libcamera_algoup_jni.xiaomi.so live? (it is NOT shipped in the APK) ---"
+  for d in /vendor/lib64 /odm/lib64 /vendor/lib64/camera /odm/lib64/camera /vendor/lib64/hw /system/lib64 /system_ext/lib64 /product/lib64 "$APP_LIB_DIR"; do
+    if [ -f "$d/libcamera_algoup_jni.xiaomi.so" ]; then
+      echo "    $d/libcamera_algoup_jni.xiaomi.so  $(wc -c < "$d/libcamera_algoup_jni.xiaomi.so") bytes  sha256 $(sha256sum "$d/libcamera_algoup_jni.xiaomi.so" 2>/dev/null | cut -c1-32)"
+    fi
+  done
+  echo "    (nothing above => the JNI lib exists only where the module put it)"
+  echo ""
+  echo "--- identical copies? (sha256 of each algo lib per location) ---"
+  for n in libmialgoengine.so libmialgoengine2.so libmialgo_utils.so libmialgo_sd.so libmialgo_ai_vision.so; do
+    echo "  $n"
+    for d in /vendor/lib64 /odm/lib64 /system/lib64 "$APP_LIB_DIR"; do
+      [ -f "$d/$n" ] && echo "    $d -> $(sha256sum "$d/$n" 2>/dev/null | cut -c1-16)"
+    done
+  done
+  echo ""
+  echo "--- vendor public.libraries.txt (context matters: linker runs as the app domain) ---"
+  ls -lZ /vendor/etc/public.libraries.txt /system/vendor/etc/public.libraries.txt 2>/dev/null
+  echo "  overlay line count: $(grep -c . "/data/adb/modules/$MODULE_ID_LOCAL/system/vendor/etc/public.libraries.txt" 2>/dev/null)"
+  echo "  avc denials mentioning public.libraries / vendor_configs_file / linker:"
+  grep "avc:" "$WORK/logcat_all.txt" 2>/dev/null | grep -iE "public.libraries|vendor_configs_file|system_lib_file|linker" | head -n 10
   echo ""
   echo "--- public.libraries.txt files (is our overlay mounted?) ---"
   for pf in $PUBLICS; do
