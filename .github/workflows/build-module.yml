@@ -136,7 +136,7 @@ jobs:
         with:
           python-version: "3.11"
 
-      - name: Install apktool (when inspecting or patching APK)
+      - name: Install apktool + Android SDK tools (when inspecting or patching APK)
         if: ${{ inputs.inspect_only == true || inputs.apply_patches == true }}
         run: |
           set -euo pipefail
@@ -146,6 +146,28 @@ jobs:
           chmod +x "$HOME/.local/bin/apktool"
           echo "$HOME/.local/bin" >> "$GITHUB_PATH"
           "$HOME/.local/bin/apktool" --version
+
+          # Android SDK: patch_apk.py needs android.jar (javac/d8 classpath) plus d8/zipalign/apksigner/aapt2
+          export ANDROID_HOME="${ANDROID_HOME:-/usr/local/lib/android/sdk}"
+          export ANDROID_SDK_ROOT="$ANDROID_HOME"
+          echo "ANDROID_HOME=$ANDROID_HOME" >> "$GITHUB_ENV"
+          echo "ANDROID_SDK_ROOT=$ANDROID_HOME" >> "$GITHUB_ENV"
+          SDKMANAGER="$(command -v sdkmanager || echo "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager")"
+          HAVE_PLATFORM="$(ls -d "$ANDROID_HOME"/platforms/android-*/android.jar 2>/dev/null | tail -n 1 || true)"
+          if [ -z "$HAVE_PLATFORM" ]; then
+            echo "[SDK] no android.jar found - installing platform + build-tools"
+            yes | "$SDKMANAGER" --licenses >/dev/null 2>&1 || true
+            "$SDKMANAGER" "platforms;android-35" "build-tools;35.0.0" >/dev/null || true
+          fi
+          BT="$(ls -d "$ANDROID_HOME"/build-tools/*/ 2>/dev/null | sort -V | tail -n 1 || true)"
+          if [ -n "$BT" ]; then
+            echo "${BT%/}" >> "$GITHUB_PATH"
+          fi
+          echo "[SDK] java=$(java -version 2>&1 | head -n 1)"
+          echo "[SDK] android.jar=$(ls -d "$ANDROID_HOME"/platforms/android-*/android.jar 2>/dev/null | tail -n 1 || echo MISSING)"
+          echo "[SDK] d8=$(ls -d "$ANDROID_HOME"/build-tools/*/d8 2>/dev/null | tail -n 1 || echo MISSING)"
+          echo "[SDK] zipalign=$(ls -d "$ANDROID_HOME"/build-tools/*/zipalign 2>/dev/null | tail -n 1 || echo MISSING)"
+          echo "[SDK] apksigner=$(ls -d "$ANDROID_HOME"/build-tools/*/apksigner 2>/dev/null | tail -n 1 || echo MISSING)"
 
       - name: Download & import source payload
         env:
@@ -214,18 +236,32 @@ jobs:
         if: ${{ inputs.inspect_only != true && inputs.apply_patches == true }}
         env:
           PATCH_SPEC: ${{ inputs.patch_spec }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          set -euo pipefail
-          if ! python3 tools/patch_apk.py input/apk/MiuiCamera.apk \
-              --patch-spec "$PATCH_SPEC" \
-              --out-apk /tmp/MiuiCamera_patched.apk \
-              --patch-report /tmp/patch_report.md 2>&1 | tee /tmp/patch.log; then
-            echo "[PATCH] patching failed - last log lines follow"
-            tail -n 60 /tmp/patch.log || true
-            TAIL="$(tail -n 25 /tmp/patch.log | tr '\n' ' ' | cut -c1-1200)"
-            echo "::error::patch_apk.py failed: ${TAIL}"
-            exit 1
-          fi
+          set -Eeuo pipefail
+          : > /tmp/patch.log
+          diag() {
+            rc=$?
+            [ "$rc" -eq 0 ] && return 0
+            echo "::error::patch step failed at line ${LINENO} (rc=$rc)"
+            {
+              echo "### patch step failure (line ${LINENO}, rc=$rc)"
+              echo '```'
+              sed -e 's/\x1b\[[0-9;]*[a-zA-Z]//g' /tmp/patch.log 2>/dev/null | tail -n 200
+              echo '```'
+            } > /tmp/fail_body.md || true
+            gh api -X POST "repos/${GITHUB_REPOSITORY}/commits/${GITHUB_SHA}/comments" \
+              -F body=@/tmp/fail_body.md >/dev/null 2>&1 || echo "[PATCH] diagnostics comment not posted"
+            return "$rc"
+          }
+          trap diag ERR
+
+          python3 tools/patch_apk.py input/apk/MiuiCamera.apk \
+            --patch-spec "$PATCH_SPEC" \
+            --out-apk /tmp/MiuiCamera_patched.apk \
+            --patch-report /tmp/patch_report.md 2>&1 | tee /tmp/patch.log
+
+          test -f /tmp/MiuiCamera_patched.apk
           mv -f /tmp/MiuiCamera_patched.apk input/apk/MiuiCamera.apk
           AAPT2="$(ls -1 /usr/local/lib/android/sdk/build-tools/*/aapt2 2>/dev/null | sort -V | tail -n 1 || true)"
           if [ -n "$AAPT2" ]; then
@@ -240,22 +276,28 @@ jobs:
           info = inspect_apk(Path("input/apk/MiuiCamera.apk"))
           print(f"[VERIFY] APK pkg={info.package} versionName={info.version_name!r} versionCode={info.version_code}")
           if info.version_name != "-Universal Cam Evorez":
-              print(f"::warning::versionName is {info.version_name!r} (expected '-Universal Cam Evorez'); continuing")
+              print(f"::warning::versionName is {info.version_name!r} (expected Universal Cam Evorez); continuing")
           '
-          cat /tmp/patch_report.md >> "$GITHUB_STEP_SUMMARY"
+          if [ -f /tmp/patch_report.md ]; then cat /tmp/patch_report.md >> "$GITHUB_STEP_SUMMARY"; fi
 
       - name: Build & validate universal module ZIP
         if: ${{ inputs.inspect_only != true }}
-        run: |
-          set -euo pipefail
-          if ! ./build.sh --output "dist/${OUTPUT_NAME:-Gold-Stock.zip}" 2>&1 | tee /tmp/build.log; then
-            TAIL="$(tail -n 25 /tmp/build.log | tr '\n' ' ' | cut -c1-1200)"
-            echo "::error::build.sh failed: ${TAIL}"
-            exit 1
-          fi
-          ls -lh dist/
         env:
           OUTPUT_NAME: ${{ inputs.output_name || 'Gold-Stock.zip' }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -Eeuo pipefail
+          : > /tmp/build.log
+          diag() {
+            rc=$?
+            [ "$rc" -eq 0 ] && return 0
+            CLEAN="$(sed -e 's/\x1b\[[0-9;]*[a-zA-Z]//g' /tmp/build.log 2>/dev/null | tail -n 30 | tr '\n' ' ' | cut -c1-900)"
+            echo "::error::build step failed (rc=$rc): ${CLEAN}"
+            return "$rc"
+          }
+          trap diag ERR
+          ./build.sh --output "dist/${OUTPUT_NAME:-Gold-Stock.zip}" 2>&1 | tee /tmp/build.log
+          ls -lh dist/
 
       - name: Upload flashable module ZIP artifact
         if: ${{ inputs.inspect_only != true }}
