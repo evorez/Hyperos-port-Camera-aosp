@@ -1,7 +1,8 @@
 # Gold-Stock — HyperOS Camera for AOSP Android 16
 
 **Deliverable:** [`Gold-Stock.zip`](https://github.com/evorez/Hyperos-port-Camera-aosp/releases/latest/download/Gold-Stock.zip) — Magisk / KernelSU / KernelSU-Next / APatch flashable module (193 MB, 57 entries).
-**Release tag (current):** `build-20261125-124558` · SHA-256 `a993d4fd8927d0b2c7ca3bb1548545a7e4370e9b680a9c2b83ae786be3ff3f78`
+**Release tag (current):** `build-20261125-130801` · SHA-256 `2de2ea98b2cd56171b67e0ff0b55fb0a8a9a6e6a7d840bf6e6ec9afea85b8521`
+**Earlier attempts:** `build-20261125-124558` (algo blobs only), `build-20261125-123507` (stock), `build-20261125-122038` (patched)
 **Previous:** `build-20261125-123507` (stock, crashed on launch — libmialgoengine.so), `build-20261125-122038` (patched, crashed on launch)
 **Previous build (patched, crashes on launch):** `build-20261125-122038`
 
@@ -18,7 +19,7 @@ Abort message: 'No pending exception expected: java.lang.RuntimeException: open 
 
 The stock HyperOS camera `dlopen()`s **libmialgoengine.so** from the vendor partition; on LineageOS the app's linker namespace cannot reach it, so ART aborts the process ~5 s after launch. This was **not** caused by the smali patch (the stock build reproduced it).
 
-**Fix in the current release:** `customize.sh` bridges `libmialgo*.so`, `libcamera_algoup*.so`, `libcam_algoup*.so`, `libmtkcam_algo*.so`, `libcam.algo*.so` from `/vendor/lib64`, `/odm/lib64`, `/system/vendor/lib64`, `/vendor/lib64/camera`, `/odm/lib64/camera`, `/system_ext/lib64`, `/product/lib64` into `priv-app/MiuiCamera/lib/arm64` (and `/system/lib64`) at install time, printing every lib it copied.
+**Fix iterations:** v1 copied only `libmialgo*` blobs (still aborted — the blobs' own vendor dependencies were unreachable). v2 (current) bridges `libmialgo*.so`, `libcamera_algoup*.so`, `libcam_algoup*.so`, `libmtkcam_algo*.so`, `libcam.algo*.so` from `/vendor/lib64`, `/odm/lib64`, `/system/vendor/lib64`, `/vendor/lib64/camera`, `/odm/lib64/camera`, `/system_ext/lib64`, `/product/lib64` into `priv-app/MiuiCamera/lib/arm64` (and `/system/lib64`), then walks each blob's `DT_NEEDED` sonames and copies the missing vendor dependencies too (3 passes), logging everything to `<module>/algo_bridge.log` (printed by the Action button).
 
 If the audit (`Action` button → "algo library audit") shows no `libmialgo*` blobs on the ROM, the blobs were stripped: pull `libmialgoengine.so` (+ `libmialgo_basic.so`, `libmialgo_utils.so`, `libmialgo_noise.so`) out of a HyperOS ROM for `gold` into `input/lib64/` and rebuild.
 
@@ -27,7 +28,7 @@ If the audit (`Action` button → "algo library audit") shows no `libmialgo*` bl
 **PHASE1_TAG:** `build-20261125-122038` · **SHA-256:** `2d3f1997df46d6e5bc722953b9f30a1ce6f4ba80d1ea18c10162c12ac3779c70`
 
 **Google Drive release copy (current):**
-- [`Gold-Stock.zip`](https://drive.google.com/file/d/1UXa-8RVcGb-Bi6k1DsOgpqxbJd9NHjfl/view?usp=drivesdk) — id `1UXa-8RVcGb-Bi6k1DsOgpqxbJd9NHjfl`, 202,747,227 bytes (vendor `libmialgo*` bridge fix)
+- [`Gold-Stock.zip`](https://drive.google.com/file/d/1jdJNbW3geaPJshY1a3q3epKDJUq3cdZP/view?usp=drivesdk) — id `1jdJNbW3geaPJshY1a3q3epKDJUq3cdZP`, 202,748,105 bytes (recursive `libmialgo` dependency bridge)
 - [`Gold-Stock.zip.sha256`](https://drive.google.com/file/d/1aGUY_mBPToHcGEPUSR1VXiuno9f5LLBf/view?usp=drivesdk) — id `1aGUY_mBPToHcGEPUSR1VXiuno9f5LLBf`
 - Both are **private (owner-only)**, matching the existing `HyperOS-Cam-AOSP-...-universal.zip` on your Drive — share as "anyone with the link" when you publish.
 **Source APK:** Drive `Gold-Stock` (id `1h7ugBvYZAJ05lIqT63opXrOt5dztcGMX`, 182,801,464 bytes) → `com.android.camera`, **versionName 6.1.000660.1** (code 610006601), minSdk 29 / targetSdk 34.
