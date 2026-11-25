@@ -1176,14 +1176,33 @@ def main(argv: List[str]) -> int:
             for entry in applied:
                 print(f"  -> [{entry['id']}] {entry['file']}: {entry['target']}")
 
+            # Determine which spec rules never matched (so reports are honest about coverage)
+            try:
+                spec_rules = json.loads(Path(args.patch_spec).read_text(encoding="utf-8")).get("patches", [])
+            except Exception:  # noqa: BLE001
+                spec_rules = []
+            applied_ids = {entry["id"] for entry in applied}
+            skipped_rules = [
+                r for r in spec_rules
+                if r.get("enabled", True) and r.get("id", "unnamed") not in applied_ids
+            ]
+
             if args.patch_report:
-                md_lines = [f"### Applied APK Patches ({len(applied)})", ""]
+                md_lines = [f"### Applied APK Patches ({len(applied)} of {len(spec_rules)} rules)", ""]
                 if not applied:
                     md_lines.append("- No patch rules matched this APK.")
                 else:
                     for entry in applied:
                         md_lines.append(f"- **{entry['id']}** (`{entry['file']}`): `{entry['target']}` — {entry['description']}")
+                if skipped_rules:
+                    md_lines += ["", f"### Skipped / Unmatched Rules ({len(skipped_rules)})", ""]
+                    for r in skipped_rules:
+                        md_lines.append(
+                            f"- **{r.get('id', 'unnamed')}** (`{r.get('type', '?')}`): {r.get('description', '')}"
+                        )
                 Path(args.patch_report).write_text("\n".join(md_lines) + "\n", encoding="utf-8")
+                print(f"[PATCH] Coverage: {len(applied_ids)}/{len(spec_rules)} rules matched; "
+                      f"{len(skipped_rules)} skipped -> {args.patch_report}")
 
             if applied:
                 rebuild_align_sign(decompiled_dir, Path(args.out_apk), apktool_bin)

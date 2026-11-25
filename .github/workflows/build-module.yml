@@ -278,7 +278,17 @@ jobs:
           if info.version_name != "-Universal Cam Evorez":
               print(f"::warning::versionName is {info.version_name!r} (expected Universal Cam Evorez); continuing")
           '
-          if [ -f /tmp/patch_report.md ]; then cat /tmp/patch_report.md >> "$GITHUB_STEP_SUMMARY"; fi
+          if [ -f /tmp/patch_report.md ]; then
+            cat /tmp/patch_report.md >> "$GITHUB_STEP_SUMMARY"
+            APPLIED_LINE="$(grep -m1 '^### Applied APK Patches' /tmp/patch_report.md || true)"
+            echo "::notice::${APPLIED_LINE:-patch report missing}"
+            SKIPPED_IDS="$(sed -n '/^### Skipped/,$p' /tmp/patch_report.md | grep '^- \*\*' | sed -e 's/^- \*\*//' -e 's/\*\*.*//' | paste -sd ',' - || true)"
+            if [ -n "$SKIPPED_IDS" ]; then
+              echo "::warning::unmatched patch rules: ${SKIPPED_IDS:0:900}"
+            fi
+            gh api -X POST "repos/${GITHUB_REPOSITORY}/commits/${GITHUB_SHA}/comments" \
+              -F body=@/tmp/patch_report.md >/dev/null 2>&1 || echo "[PATCH] report comment not posted"
+          fi
 
       - name: Build & validate universal module ZIP
         if: ${{ inputs.inspect_only != true }}
