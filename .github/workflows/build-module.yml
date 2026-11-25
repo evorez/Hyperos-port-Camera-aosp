@@ -216,10 +216,16 @@ jobs:
           PATCH_SPEC: ${{ inputs.patch_spec }}
         run: |
           set -euo pipefail
-          python3 tools/patch_apk.py input/apk/MiuiCamera.apk \
-            --patch-spec "$PATCH_SPEC" \
-            --out-apk /tmp/MiuiCamera_patched.apk \
-            --patch-report /tmp/patch_report.md
+          if ! python3 tools/patch_apk.py input/apk/MiuiCamera.apk \
+              --patch-spec "$PATCH_SPEC" \
+              --out-apk /tmp/MiuiCamera_patched.apk \
+              --patch-report /tmp/patch_report.md 2>&1 | tee /tmp/patch.log; then
+            echo "[PATCH] patching failed - last log lines follow"
+            tail -n 60 /tmp/patch.log || true
+            TAIL="$(tail -n 25 /tmp/patch.log | tr '\n' ' ' | cut -c1-1200)"
+            echo "::error::patch_apk.py failed: ${TAIL}"
+            exit 1
+          fi
           mv -f /tmp/MiuiCamera_patched.apk input/apk/MiuiCamera.apk
           AAPT2="$(ls -1 /usr/local/lib/android/sdk/build-tools/*/aapt2 2>/dev/null | sort -V | tail -n 1 || true)"
           if [ -n "$AAPT2" ]; then
@@ -242,7 +248,11 @@ jobs:
         if: ${{ inputs.inspect_only != true }}
         run: |
           set -euo pipefail
-          ./build.sh --output "dist/${OUTPUT_NAME:-Gold-Stock.zip}"
+          if ! ./build.sh --output "dist/${OUTPUT_NAME:-Gold-Stock.zip}" 2>&1 | tee /tmp/build.log; then
+            TAIL="$(tail -n 25 /tmp/build.log | tr '\n' ' ' | cut -c1-1200)"
+            echo "::error::build.sh failed: ${TAIL}"
+            exit 1
+          fi
           ls -lh dist/
         env:
           OUTPUT_NAME: ${{ inputs.output_name || 'Gold-Stock.zip' }}
