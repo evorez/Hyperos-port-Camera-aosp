@@ -1,15 +1,33 @@
 # Gold-Stock — HyperOS Camera for AOSP Android 16
 
 **Deliverable:** [`Gold-Stock.zip`](https://github.com/evorez/Hyperos-port-Camera-aosp/releases/latest/download/Gold-Stock.zip) — Magisk / KernelSU / KernelSU-Next / APatch flashable module (193 MB, 57 entries).
-**Release tag (current, stock/FC-safe):** `build-20261125-123507` · SHA-256 `58661f71cacfccc704b7e1eb4710249bff367000235f00a772d68dc9c93684f9`
+**Release tag (current):** `build-20261125-124558` · SHA-256 `a993d4fd8927d0b2c7ca3bb1548545a7e4370e9b680a9c2b83ae786be3ff3f78`
+**Previous:** `build-20261125-123507` (stock, crashed on launch — libmialgoengine.so), `build-20261125-122038` (patched, crashed on launch)
 **Previous build (patched, crashes on launch):** `build-20261125-122038`
 
-> ⚠️ The 60fps smali patch (`patches/gold_stock_61.json`) caused an immediate FC on launch on the tester device, so the current release repackages the **untouched stock APK** (`apply_patches=false`). Re-enable patches only with a crash log to verify.
+## Confirmed crash root cause (device diag bundle, 2026-11-25)
+
+Device: `gold` (2312DRAABI, MediaTek) · LineageOS 23 · Android 16 / API 36 · `userdebug`.
+
+```text
+Abort message: 'No pending exception expected: java.lang.RuntimeException: open libmialgoengine.so failed!
+  at int com.xiaomi.engine.MiCamAlgoInterfaceJNI.init(java.lang.String)
+  at void com.xiaomi.engine.MiCameraAlgo.init(android.content.Context)
+  #07 /system/priv-app/MiuiCamera/lib/arm64/libcamera_algoup_jni.xiaomi.so (Java_com_xiaomi_engine_MiCamAlgoInterfaceJNI_init)
+```
+
+The stock HyperOS camera `dlopen()`s **libmialgoengine.so** from the vendor partition; on LineageOS the app's linker namespace cannot reach it, so ART aborts the process ~5 s after launch. This was **not** caused by the smali patch (the stock build reproduced it).
+
+**Fix in the current release:** `customize.sh` bridges `libmialgo*.so`, `libcamera_algoup*.so`, `libcam_algoup*.so`, `libmtkcam_algo*.so`, `libcam.algo*.so` from `/vendor/lib64`, `/odm/lib64`, `/system/vendor/lib64`, `/vendor/lib64/camera`, `/odm/lib64/camera`, `/system_ext/lib64`, `/product/lib64` into `priv-app/MiuiCamera/lib/arm64` (and `/system/lib64`) at install time, printing every lib it copied.
+
+If the audit (`Action` button → "algo library audit") shows no `libmialgo*` blobs on the ROM, the blobs were stripped: pull `libmialgoengine.so` (+ `libmialgo_basic.so`, `libmialgo_utils.so`, `libmialgo_noise.so`) out of a HyperOS ROM for `gold` into `input/lib64/` and rebuild.
+
+> Patch policy: `apply_patches=false` for now. The 60fps smali patch (`patches/gold_stock_61.json`) is unused until the camera actually launches.
 
 **PHASE1_TAG:** `build-20261125-122038` · **SHA-256:** `2d3f1997df46d6e5bc722953b9f30a1ce6f4ba80d1ea18c10162c12ac3779c70`
 
 **Google Drive release copy (current):**
-- [`Gold-Stock.zip`](https://drive.google.com/file/d/1qjqpGwPjLXSUHlOpwhdLdR1_w1klG70c/view?usp=drivesdk) — id `1qjqpGwPjLXSUHlOpwhdLdR1_w1klG70c`, 202,746,315 bytes (stock variant; duplicate attempt uploads of the crashing patched build were trashed)
+- [`Gold-Stock.zip`](https://drive.google.com/file/d/1UXa-8RVcGb-Bi6k1DsOgpqxbJd9NHjfl/view?usp=drivesdk) — id `1UXa-8RVcGb-Bi6k1DsOgpqxbJd9NHjfl`, 202,747,227 bytes (vendor `libmialgo*` bridge fix)
 - [`Gold-Stock.zip.sha256`](https://drive.google.com/file/d/1aGUY_mBPToHcGEPUSR1VXiuno9f5LLBf/view?usp=drivesdk) — id `1aGUY_mBPToHcGEPUSR1VXiuno9f5LLBf`
 - Both are **private (owner-only)**, matching the existing `HyperOS-Cam-AOSP-...-universal.zip` on your Drive — share as "anyone with the link" when you publish.
 **Source APK:** Drive `Gold-Stock` (id `1h7ugBvYZAJ05lIqT63opXrOt5dztcGMX`, 182,801,464 bytes) → `com.android.camera`, **versionName 6.1.000660.1** (code 610006601), minSdk 29 / targetSdk 34.
