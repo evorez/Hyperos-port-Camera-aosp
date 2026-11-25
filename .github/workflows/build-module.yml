@@ -74,7 +74,8 @@ jobs:
           set -euo pipefail
           echo "::add-mask::$GDRIVE_UPLOAD_URI"
           mkdir -p /tmp/rel_dl
-          gh release download "$RELEASE_TAG" -R "${{ github.repository }}" -p "*.zip" -D /tmp/rel_dl
+          gh release download "$RELEASE_TAG" -R "${{ github.repository }}" -p "*.zip" -p "*.sha256" -D /tmp/rel_dl
+          ls -lh /tmp/rel_dl
           python3 - <<'PY'
           import glob, os, urllib.request
           uri = os.environ["GDRIVE_UPLOAD_URI"].strip()
@@ -105,10 +106,11 @@ jobs:
                   if is_last:
                       print("FINALIZED:", body[:300])
                       assert status == "final", f"Expected final, got {status}"
+          print("::notice::Drive upload finalized for " + path.name)
           PY
 
   test-and-validate:
-    if: ${{ github.event_name != 'workflow_dispatch' || inputs.sync_release_tag == '' }}
+    if: ${{ github.event_name != 'workflow_dispatch' || (inputs.sync_release_tag == '' && inputs.verify_tag == '') }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -126,7 +128,7 @@ jobs:
         run: ./build.sh --allow-no-apk --output dist/template-dryrun.zip
 
   build-flashable-zip:
-    if: github.event_name == 'workflow_dispatch' && inputs.verify_tag == ''
+    if: github.event_name == 'workflow_dispatch' && inputs.verify_tag == '' && inputs.sync_release_tag == ''
     needs: test-and-validate
     runs-on: ubuntu-latest
     permissions:
