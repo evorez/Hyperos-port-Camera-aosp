@@ -1,0 +1,368 @@
+# APK native library analysis
+
+APK: `source.apk` (182801464 bytes, sha256 `38de6c2f38351dd7…`)
+
+## ABIs present in the APK
+
+- `arm64-v8a`: 41 shared objects
+
+## arm64 libs shipped in the APK (41)
+
+| lib | size | sha256 (16) |
+| --- | --- | --- |
+| `libAIPOSE.so` | 1610560 | `7303e493dfc402c0…` |
+| `libCameraToolJNI.so` | 66472 | `2eadb278acbe2e3b…` |
+| `libDocumentProcess.so` | 9256800 | `1c750a3853b69720…` |
+| `libMiFilterSDK.so` | 1094352 | `7da63d01c905e967…` |
+| `libMiVideoSDK.so` | 2189728 | `ee184c842da02f48…` |
+| `libYuvWatermark.so` | 9928 | `e5bfcaddf4f1d7a8…` |
+| `libbarhopper_v3.so` | 4418592 | `bd545ef894c2dc9e…` |
+| `libc++_shared.so` | 1014768 | `95f1dd493ef287b4…` |
+| `libcamera_memory_util_jni.so` | 805112 | `38433a937a852be1…` |
+| `libcamera_mi_handgesture.so` | 37856 | `3694c7af3ef7f20d…` |
+| `libcamera_video_mein_algo_jni.so` | 8080 | `4953b9349067ee0c…` |
+| `libcamera_yuv_jni.so` | 464064 | `b1d188fda3d31e61…` |
+| `libcameraheif.so` | 804304 | `c86d02c38fd40e9e…` |
+| `libcloud_text_loader.so` | 5248 | `57d44f24feef67b0…` |
+| `libcrashlytics-common.so` | 755864 | `db3c33bc6e1c0d04…` |
+| `libcrashlytics-handler.so` | 185960 | `810521d2e125c4f8…` |
+| `libcrashlytics-trampoline.so` | 4848 | `811584e54eed37e9…` |
+| `libcrashlytics.so` | 195568 | `cad4bd6e1a6fb97c…` |
+| `libheif_jni.so` | 45544 | `c436875f430a90e3…` |
+| `libijkffmpeg.so` | 3714040 | `7d3684bb6b808f30…` |
+| `libijkplayer.so` | 369080 | `a8556e63cfc87de5…` |
+| `libijksdl.so` | 485448 | `ae81f897fe0773ff…` |
+| `liblog.so` | 9448 | `1e0793ab169e1dd5…` |
+| `libmialgo_saliency.so` | 182600 | `e6d1f13d5d1a8dc9…` |
+| `libmialgo_saliency_jni.so` | 34664 | `75a5e7b1dc123547…` |
+| `libmicontinuity_sdk.so` | 1817432 | `a17d13009479a4e5…` |
+| `libmievent.so` | 4440 | `77d73cc304a704c2…` |
+| `libmiffmpeg.so` | 2745384 | `90e8df8a8991c66f…` |
+| `libmiocr_wrapper.so` | 825544 | `ae966a28d8c844d0…` |
+| `libmulti-wakeup-engine.so` | 3508512 | `bbef93b442cf2044…` |
+| `libopenssl_jni.so` | 2248248 | `a9c480c8bd61bf83…` |
+| `librender_engine.so` | 87008 | `71c6d5f69f379e5d…` |
+| `libresource_loader.so` | 8472 | `73a316217b24a6db…` |
+| `libsdk_patcher_jni.so` | 107528 | `8a350f34c232a3b7…` |
+| `libslow_video_color_converter.so` | 8296 | `97ee36a6e397a4be…` |
+| `libturbojpeg.so` | 469272 | `a51befaffa24ce3f…` |
+| `libvideo_extra_color_converter.so` | 9928 | `05e82c3988127016…` |
+| `libvideo_extra_interpolator.so` | 530280 | `cfaf467e558369d9…` |
+| `libxcrash.so` | 76088 | `b6943bcfc6ec338d…` |
+| `libxcrash_dumper.so` | 113488 | `02980659f0126b13…` |
+| `libyuv.so` | 468992 | `5a132654a814f354…` |
+
+## Algo-related libs in the APK (3)
+
+### `libcamera_video_mein_algo_jni.so`
+
+```
+Dynamic section at offset 0x1598 contains 29 entries:
+  Tag        Type                         Name/Value
+ 0x0000000000000001 (NEEDED)             Shared library: [libxmi_slow_motion_mein.so]
+ 0x0000000000000001 (NEEDED)             Shared library: [libmialgo_utils.so]
+ 0x0000000000000001 (NEEDED)             Shared library: [liblog.so]
+ 0x0000000000000001 (NEEDED)             Shared library: [libm.so]
+ 0x0000000000000001 (NEEDED)             Shared library: [libc++_shared.so]
+ 0x0000000000000001 (NEEDED)             Shared library: [libdl.so]
+ 0x0000000000000001 (NEEDED)             Shared library: [libc.so]
+ 0x000000000000000e (SONAME)             Library soname: [libcamera_video_mein_algo_jni.so]
+ 0x000000000000001e (FLAGS)              BIND_NOW
+ 0x000000006ffffffb (FLAGS_1)            Flags: NOW
+ 0x0000000000000007 (RELA)               0x970
+ 0x0000000000000008 (RELASZ)             96 (bytes)
+ 0x0000000000000009 (RELAENT)            24 (bytes)
+ 0x000000006ffffff9 (RELACOUNT)          3
+ 0x0000000000000017 (JMPREL)             0x9d0
+ 0x0000000000000002 (PLTRELSZ)           240 (bytes)
+ 0x0000000000000003 (PLTGOT)             0x3770
+ 0x0000000000000014 (PLTREL)             RELA
+ 0x0000000000000006 (SYMTAB)             0x330
+ 0x000000000000000b (SYMENT)             24 (bytes)
+ 0x0000000000000005 (STRTAB)             0x5f4
+ 0x000000000000000a (STRSZ)              892 (bytes)
+ 0x000000006ffffef5 (GNU_HASH)           0x590
+ 0x000000000000001a (FINI_ARRAY)         0x3588
+ 0x000000000000001c (FINI_ARRAYSZ)       16 (bytes)
+ 0x000000006ffffff0 (VERSYM)             0x540
+ 0x000000006ffffffe (VERNEED)            0x56c
+ 0x000000006fffffff (VERNEEDNUM)         1
+ 0x0000000000000000 (NULL)               0x0
+```
+
+### `libmialgo_saliency.so`
+
+```
+Dynamic section at offset 0x2ba88 contains 35 entries:
+  Tag        Type                         Name/Value
+ 0x0000000000000001 (NEEDED)             Shared library: [libOpenCL.so]
+ 0x0000000000000001 (NEEDED)             Shared library: [libcdsprpc.so]
+ 0x0000000000000001 (NEEDED)             Shared library: [libmialgo_ai_vision.so]
+ 0x0000000000000001 (NEEDED)             Shared library: [libc++_shared.so]
+ 0x0000000000000001 (NEEDED)             Shared library: [libm.so]
+ 0x0000000000000001 (NEEDED)             Shared library: [liblog.so]
+ 0x0000000000000001 (NEEDED)             Shared library: [libz.so]
+ 0x0000000000000001 (NEEDED)             Shared library: [libc.so]
+ 0x0000000000000001 (NEEDED)             Shared library: [libGLESv3.so]
+ 0x0000000000000001 (NEEDED)             Shared library: [libEGL.so]
+ 0x0000000000000001 (NEEDED)             Shared library: [libdl.so]
+ 0x000000000000000e (SONAME)             Library soname: [libmialgo_saliency.so]
+ 0x0000000000000019 (INIT_ARRAY)         0x3ba60
+ 0x000000000000001b (INIT_ARRAYSZ)       24 (bytes)
+ 0x000000000000001a (FINI_ARRAY)         0x3ba78
+ 0x000000000000001c (FINI_ARRAYSZ)       16 (bytes)
+ 0x0000000000000004 (HASH)               0x228
+ 0x0000000000000005 (STRTAB)             0x1c40
+ 0x0000000000000006 (SYMTAB)             0x890
+ 0x000000000000000a (STRSZ)              2934 (bytes)
+ 0x000000000000000b (SYMENT)             24 (bytes)
+ 0x0000000000000003 (PLTGOT)             0x3bcf8
+ 0x0000000000000002 (PLTRELSZ)           2088 (bytes)
+ 0x0000000000000014 (PLTREL)             RELA
+ 0x0000000000000017 (JMPREL)             0x2ad8
+ 0x0000000000000007 (RELA)               0x29a0
+ 0x0000000000000008 (RELASZ)             312 (bytes)
+ 0x0000000000000009 (RELAENT)            24 (bytes)
+ 0x000000000000001e (FLAGS)              BIND_NOW
+ 0x000000006ffffffb (FLAGS_1)            Flags: NOW
+ 0x000000006ffffffe (VERNEED)            0x2960
+ 0x000000006fffffff (VERNEEDNUM)         2
+ 0x000000006ffffff0 (VERSYM)             0x27b6
+ 0x000000006ffffff9 (RELACOUNT)          6
+ 0x0000000000000000 (NULL)               0x0
+```
+
+### `libmialgo_saliency_jni.so`
+
+```
+Dynamic section at offset 0x7c58 contains 28 entries:
+  Tag        Type                         Name/Value
+ 0x0000000000000001 (NEEDED)             Shared library: [libmialgo_saliency.so]
+ 0x0000000000000001 (NEEDED)             Shared library: [liblog.so]
+ 0x0000000000000001 (NEEDED)             Shared library: [libm.so]
+ 0x0000000000000001 (NEEDED)             Shared library: [libc++_shared.so]
+ 0x0000000000000001 (NEEDED)             Shared library: [libdl.so]
+ 0x0000000000000001 (NEEDED)             Shared library: [libc.so]
+ 0x000000000000000e (SONAME)             Library soname: [libmialgo_saliency_jni.so]
+ 0x000000000000001a (FINI_ARRAY)         0x8c40
+ 0x000000000000001c (FINI_ARRAYSZ)       16 (bytes)
+ 0x000000006ffffef5 (GNU_HASH)           0x228
+ 0x0000000000000005 (STRTAB)             0x9a0
+ 0x0000000000000006 (SYMTAB)             0x388
+ 0x000000000000000a (STRSZ)              3112 (bytes)
+ 0x000000000000000b (SYMENT)             24 (bytes)
+ 0x0000000000000003 (PLTGOT)             0x8e58
+ 0x0000000000000002 (PLTRELSZ)           1104 (bytes)
+ 0x0000000000000014 (PLTREL)             RELA
+ 0x0000000000000017 (JMPREL)             0x1718
+ 0x0000000000000007 (RELA)               0x1670
+ 0x0000000000000008 (RELASZ)             168 (bytes)
+ 0x0000000000000009 (RELAENT)            24 (bytes)
+ 0x000000000000001e (FLAGS)              BIND_NOW
+ 0x000000006ffffffb (FLAGS_1)            Flags: NOW
+ 0x000000006ffffffe (VERNEED)            0x1650
+ 0x000000006fffffff (VERNEEDNUM)         1
+ 0x000000006ffffff0 (VERSYM)             0x15c8
+ 0x000000006ffffff9 (RELACOUNT)          3
+ 0x0000000000000000 (NULL)               0x0
+```
+
+## `libcamera_video_mein_algo_jni.so` — every string that names a library / dlopen target / version
+
+```
+Java_com_miui_extravideoxmalgo_xiaomiAlgoInterpolator_XiaomiAlgoInterpolatorJNI_MiVideoMeinInit
+Java_com_miui_extravideoxmalgo_xiaomiAlgoInterpolator_XiaomiAlgoInterpolatorJNI_MiVideoMeinProcess
+Java_com_miui_extravideoxmalgo_xiaomiAlgoInterpolator_XiaomiAlgoInterpolatorJNI_MiVideoMeinUnit
+Java_com_miui_extravideoxmalgo_xiaomiAlgoInterpolator_XiaomiAlgoInterpolatorJNI_allocateBuffer
+Java_com_miui_extravideoxmalgo_xiaomiAlgoInterpolator_XiaomiAlgoInterpolatorJNI_freeBuffer
+Java_com_miui_extravideoxmalgo_xiaomiAlgoInterpolator_XiaomiAlgoInterpolatorJNI_getAddress
+libc.so
+libxmi_slow_motion_mein.so
+libmialgo_utils.so
+liblog.so
+libm.so
+libc++_shared.so
+libdl.so
+libcamera_video_mein_algo_jni.so
+/odm/etc/camera/xmi_slmt_4x_1080p.dlc
+/sdcard/Android/data/com.xiaomi.camera/files;/system/lib/rfsa/adsp;/system/vendor/lib/rfsa/adsp;/dsp
+/odm/etc/camera/xmi_slmt_4x_720p.dlc
+mialgomein
+Android (7714059, based on r416183c1) clang version 12.0.8 (https://android.googlesource.com/toolchain/llvm-project c935d99d7cf2016289302412d708641d52d2f7ee)
+.gnu.version_r
+.gnu.version
+```
+
+## `libmialgo_saliency.so` — every string that names a library / dlopen target / version
+
+```
+MialgoAiVisionFree
+MialgoAiVisionInit
+MialgoAiVisionProcess
+MialgoAiVisionSetWait
+ALGO_SALIENCY_GetVersion
+libOpenCL.so
+libcdsprpc.so
+libmialgo_ai_vision.so
+libc++_shared.so
+libm.so
+liblog.so
+libz.so
+libc.so
+libGLESv3.so
+libEGL.so
+libdl.so
+libmialgo_saliency.so
+algo_saliency
+camera.algo.saliency.isbypass
+algo_saliency_init: saliency close, bypass is: %d
+algo_saliency_init: saliency open, bypass is: %d
+algo_saliency_init: applicate memory  time: %f ms
+mialgo-ai
+algo_saliency_init: snpe init  time: %f ms
+algo_saliency_init: MialgoAiVisionSetWait fail!
+camera.algo.saliency.log
+camera.algo.saliency.dump
+camera.algo.saliency.threshold
+camera.algo.saliency.solidcolor
+algo_saliency_init: saliency init time: %f ms, platform: %s, device: %s, snpe-perf-code: %d
+algo_saliency_proc: Process break!
+algo_saliency_proc: width %d, height %d, stride %d, angle %d, format %d, dump_flag: %d, threshold_prob: %f, solidcolor_thr: %f
+algo_saliency_proc: inRoi  left: %d;  top: %d;  width: %d;  height: %d
+algo_saliency_proc: Process image size not match
+algo_saliency_proc: Process inBox xy erro!
+algo_saliency_proc: Process inBox and Init defaultBox not match!
+algo_saliency_proc: Preprocess failed!
+algo_saliency_proc: preprocess time: %f ms
+algo_saliency_proc: MialgoAiVisionProcess failed!
+algo_saliency_proc: forward time %f ms
+algo_saliency_proc: outRoi  left: %d;  top: %d;  width: %d;  height: %d; domain_num: %d; outFlag: %d
+algo_saliency_proc: postprocess time: %f ms
+algo_saliency_proc: dump raw time: %f ms
+algo_saliency_proc: saliency process time: %f ms
+algo_saliency_break: break before free
+algo_saliency_free: free success
+algo_saliency_init: saliency version %s
+algo_saliency_init: invalid image size or box size
+algo_saliency_init: w %d, h %d, box_w %d, box_h %d, asset path: %s, dsp env path: %s
+algo_saliency_init: processor init error
+algo_saliency_init: init success
+algo_saliency_proc: empty handle
+algo_saliency_proc: input data is NULL
+algo_saliency_proc: imgFormat is not rgb or rgba
+algo_saliency_proc: invalid image size
+algo_saliency_proc: invalid rotate angle
+algo_saliency_proc: invalid inBuffer or invalid image size
+algo_saliency_free: release error
+/vendor/etc/camera/
+algo_saliency_proc: dump input open dump file failed
+algo_saliency_proc: dump crop open dump file failed
+algo_saliency_proc: dump info open dump file failed
+algo_saliency_proc: dump segResult open dump file failed
+algo_saliency_proc: incorrect box rect (%d, %d, %d, %d).
+algo_saliency_proc: box rect is out of bound (%d, %d, %d, %d).
+algo_saliency_proc: in/out image buffer NULL.
+Android (5058415 based on r339409) clang version 8.0.2 (https://android.googlesource.com/toolchain/clang 40173bab62ec746213857d083c0e8b0abb568790) (https://android.googlesource.com/toolchain/llvm 7a6618d69e7e8111e1d49dc9e7813767c5ca756a) (based on LLVM 8.0.2svn)
+Android (4751641 based on r328903) clang version 7.0.2 (https://android.googlesource.com/toolchain/clang 003100370607242ddd5815e4a043907ea9004281) (https://android.googlesource.com/toolchain/llvm 1d739ffb0366421d383e04ff80ec2ee591315116) (based on LLVM 7.0.2svn)
+.gnu.version_r
+.gnu.version
+```
+
+## DT_NEEDED summary for all arm64 libs
+
+| lib | NEEDED |
+| --- | --- |
+| `libAIPOSE.so` | `liblog.so`, `libm.so`, `libc++_shared.so`, `libdl.so`, `libc.so` |
+| `libCameraToolJNI.so` | `libturbojpeg.so`, `libjnigraphics.so`, `libGLESv2.so`, `libGLESv3.so`, `libEGL.so`, `libandroid.so`, `liblog.so`, `libm.so`, `libc++_shared.so`, `libdl.so`, `libc.so` |
+| `libDocumentProcess.so` | `liblog.so`, `libOpenCL.so`, `libjnigraphics.so`, `libc.so`, `libz.so`, `libdl.so`, `libm.so`, `libc++_shared.so` |
+| `libMiFilterSDK.so` | `libandroid.so`, `libjnigraphics.so`, `liblog.so`, `libGLESv3.so`, `libEGL.so`, `libnativewindow.so`, `libm.so`, `libdl.so`, `libc.so` |
+| `libMiVideoSDK.so` | `liblog.so`, `libGLESv3.so`, `libEGL.so`, `libandroid.so`, `libmediandk.so`, `libjnigraphics.so`, `libOpenSLES.so`, `libmiffmpeg.so`, `libdl.so`, `libm.so`, `libc.so` |
+| `libYuvWatermark.so` | `liblog.so`, `libjnigraphics.so`, `libGLESv3.so`, `libandroid.so`, `libm.so`, `libc++_shared.so`, `libdl.so`, `libc.so` |
+| `libbarhopper_v3.so` | `libjnigraphics.so`, `liblog.so`, `libdl.so`, `libm.so`, `libc.so` |
+| `libc++_shared.so` | `libc.so`, `libdl.so` |
+| `libcamera_memory_util_jni.so` | `liblog.so`, `libm.so`, `libdl.so`, `libc.so` |
+| `libcamera_mi_handgesture.so` | `libAIPOSE.so`, `liblog.so`, `libz.so`, `libm.so`, `libc++_shared.so`, `libdl.so`, `libc.so` |
+| `libcamera_video_mein_algo_jni.so` | `libxmi_slow_motion_mein.so`, `libmialgo_utils.so`, `liblog.so`, `libm.so`, `libc++_shared.so`, `libdl.so`, `libc.so` |
+| `libcamera_yuv_jni.so` | `liblog.so`, `libm.so`, `libc++_shared.so`, `libdl.so`, `libc.so` |
+| `libcameraheif.so` | `libm.so`, `libc++_shared.so`, `libdl.so`, `libc.so` |
+| `libcloud_text_loader.so` | `libm.so`, `libc++_shared.so`, `libdl.so`, `libc.so` |
+| `libcrashlytics-common.so` | `liblog.so`, `libz.so`, `libdl.so`, `libc.so`, `libm.so` |
+| `libcrashlytics-handler.so` | `liblog.so`, `libz.so`, `libc.so`, `libm.so`, `libdl.so` |
+| `libcrashlytics-trampoline.so` | `liblog.so`, `libc.so`, `libm.so`, `libdl.so` |
+| `libcrashlytics.so` | `liblog.so`, `libc.so`, `libm.so`, `libdl.so` |
+| `libheif_jni.so` | `libcameraheif.so`, `libandroid.so`, `libjnigraphics.so`, `liblog.so`, `libm.so`, `libc++_shared.so`, `libdl.so`, `libc.so` |
+| `libijkffmpeg.so` | `libm.so`, `libz.so`, `libc.so`, `libdl.so` |
+| `libijkplayer.so` | `libijkffmpeg.so`, `libijksdl.so`, `liblog.so`, `libandroid.so`, `libdl.so`, `libstdc++.so`, `libm.so`, `libc.so` |
+| `libijksdl.so` | `libijkffmpeg.so`, `liblog.so`, `libandroid.so`, `libOpenSLES.so`, `libEGL.so`, `libGLESv2.so`, `libdl.so`, `libstdc++.so`, `libm.so`, `libc.so` |
+| `liblog.so` | — |
+| `libmialgo_saliency.so` | `libOpenCL.so`, `libcdsprpc.so`, `libmialgo_ai_vision.so`, `libc++_shared.so`, `libm.so`, `liblog.so`, `libz.so`, `libc.so`, `libGLESv3.so`, `libEGL.so`, `libdl.so` |
+| `libmialgo_saliency_jni.so` | `libmialgo_saliency.so`, `liblog.so`, `libm.so`, `libc++_shared.so`, `libdl.so`, `libc.so` |
+| `libmicontinuity_sdk.so` | `liblog.so`, `libandroid.so`, `libm.so`, `libdl.so`, `libc.so` |
+| `libmievent.so` | `liblog.so`, `libm.so`, `libdl.so`, `libc.so` |
+| `libmiffmpeg.so` | `libm.so`, `libz.so`, `liblog.so`, `libdl.so`, `libc.so` |
+| `libmiocr_wrapper.so` | `libmiocr.so`, `liblog.so`, `libjnigraphics.so`, `libandroid.so`, `libm.so`, `libdl.so`, `libc.so` |
+| `libmulti-wakeup-engine.so` | `liblog.so`, `libm.so`, `libdl.so`, `libc.so` |
+| `libopenssl_jni.so` | `liblog.so`, `libm.so`, `libc++_shared.so`, `libdl.so`, `libc.so` |
+| `librender_engine.so` | `libjnigraphics.so`, `libGLESv3.so`, `libEGL.so`, `libandroid.so`, `liblog.so`, `libm.so`, `libc++_shared.so`, `libdl.so`, `libc.so` |
+| `libresource_loader.so` | `liblog.so`, `libm.so`, `libc++_shared.so`, `libdl.so`, `libc.so` |
+| `libsdk_patcher_jni.so` | `liblog.so`, `libm.so`, `libdl.so`, `libc.so` |
+| `libslow_video_color_converter.so` | `liblog.so`, `libm.so`, `libdl.so`, `libc.so` |
+| `libturbojpeg.so` | `libm.so`, `libdl.so`, `libc.so` |
+| `libvideo_extra_color_converter.so` | `liblog.so`, `libm.so`, `libdl.so`, `libc.so` |
+| `libvideo_extra_interpolator.so` | `liblog.so`, `libm.so`, `libc++_shared.so`, `libdl.so`, `libc.so` |
+| `libxcrash.so` | `liblog.so`, `libdl.so`, `libm.so`, `libc.so` |
+| `libxcrash_dumper.so` | `liblog.so`, `libdl.so`, `libm.so`, `libc.so` |
+| `libyuv.so` | `libm.so`, `libc++_shared.so`, `libdl.so`, `libc.so` |
+
+## Imported vs exported symbols (algo libs)
+
+### `libcamera_video_mein_algo_jni.so`
+
+- imported (UND) 10: MiVideoMeinInit, MiVideoMeinProcess, MiVideoMeinUnit, __android_log_print, __cxa_atexit, __cxa_finalize, __register_atfork, calloc, free, setenv
+- exported 12: Java_com_miui_extravideoxmalgo_xiaomiAlgoInterpolator_XiaomiAlgoInterpolatorJNI_MiVideoMeinInit, Java_com_miui_extravideoxmalgo_xiaomiAlgoInterpolator_XiaomiAlgoInterpolatorJNI_MiVideoMeinProcess, Java_com_miui_extravideoxmalgo_xiaomiAlgoInterpolator_XiaomiAlgoInterpolatorJNI_MiVideoMeinUnit, Java_com_miui_extravideoxmalgo_xiaomiAlgoInterpolator_XiaomiAlgoInterpolatorJNI_allocateBuffer, Java_com_miui_extravideoxmalgo_xiaomiAlgoInterpolator_XiaomiAlgoInterpolatorJNI_freeBuffer, Java_com_miui_extravideoxmalgo_xiaomiAlgoInterpolator_XiaomiAlgoInterpolatorJNI_getAddress, Name, SetAdspLibraryPath, __bss_start, _edata, _end, handler
+
+### `libmialgo_saliency.so`
+
+- imported (UND) 57: MialgoAiVisionFree, MialgoAiVisionInit, MialgoAiVisionProcess, MialgoAiVisionSetWait, _ZNSt11logic_errorC2EPKc, _ZNSt12length_errorD1Ev, _ZNSt6__ndk16chrono12steady_clock3nowEv, _ZSt9terminatev, _ZTISt12length_error, _ZTVSt12length_error, _ZdlPv, _Znam, _Znwm, __android_log_print, __cxa_allocate_exception, __cxa_atexit, __cxa_begin_catch, __cxa_finalize, __cxa_free_exception, __cxa_throw, __gxx_personality_v0, __register_atfork, __sF, __stack_chk_fail, __system_property_get, abort, access, atof, atoi, calloc, dl_iterate_phdr, fclose, fflush, fopen, fprintf, free, fwrite, localtime, malloc, memcmp, memcpy, memmove, memset, pthread_create, pthread_getspecific, pthread_key_create, pthread_key_delete, pthread_mutex_lock, pthread_mutex_unlock, pthread_once, pthread_setspecific, realloc, snprintf, strlen, strtok, time, usleep
+- exported 151: ALGO_SALIENCY_Free, ALGO_SALIENCY_GetVersion, ALGO_SALIENCY_Init, ALGO_SALIENCY_Process, Name, _Unwind_Backtrace, _Unwind_DeleteException, _Unwind_FindEnclosingFunction, _Unwind_Find_FDE, _Unwind_ForcedUnwind, _Unwind_GetCFA, _Unwind_GetDataRelBase, _Unwind_GetGR, _Unwind_GetIP, _Unwind_GetIPInfo, _Unwind_GetLanguageSpecificData, _Unwind_GetRegionStart, _Unwind_GetTextRelBase, _Unwind_RaiseException, _Unwind_Resume, _Unwind_Resume_or_Rethrow, _Unwind_SetGR, _Unwind_SetIP, __CTOR_LIST__, __DTOR_LIST__, __aarch64_sync_cache_range, __absvdi2, __absvsi2, __absvti2, __addtf3, __addvdi3, __addvsi3, __addvti3, __ashlti3, __ashrti3, __bss_end__, __bss_start, __bss_start__, __bswapdi2, __bswapsi2, __clear_cache, __clrsbdi2, __clrsbti2, __clz_tab, __clzdi2, __clzti2, __cmpdf2, __cmpti2, __ctzdi2, __ctzti2, __deregister_frame, __deregister_frame_info, __deregister_frame_info_bases, __divdc3, __divsc3, __divtc3, __divtf3, __divti3, __emutls_get_address, __emutls_register_common
+
+### `libmialgo_saliency_jni.so`
+
+- imported (UND) 23: ALGO_SALIENCY_Free, ALGO_SALIENCY_GetVersion, ALGO_SALIENCY_Init, ALGO_SALIENCY_Process, _Unwind_Resume, _ZNSt11logic_errorC2EPKc, _ZNSt12length_errorD1Ev, _ZTISt12length_error, _ZTVSt12length_error, _ZdlPv, _Znwm, __android_log_print, __cxa_allocate_exception, __cxa_atexit, __cxa_finalize, __cxa_free_exception, __cxa_throw, __gxx_personality_v0, __register_atfork, __stack_chk_fail, memcpy, memmove, strlen
+- exported 40: Java_com_android_camera_saliencychecker_SaliencyChecker_nativeFree, Java_com_android_camera_saliencychecker_SaliencyChecker_nativeGetVersion, Java_com_android_camera_saliencychecker_SaliencyChecker_nativeInit, Java_com_android_camera_saliencychecker_SaliencyChecker_nativeProcess, Name, _Z18TransformFreeInputP7_JNIEnvP8_jobjectRN15mialgo_saliency28_tag_ALGO_SALIENCY_FREEPARAME, _Z18TransformInitInputP7_JNIEnvP8_jobjectRN15mialgo_saliency28_tag_ALGO_SALIENCY_INITPARAME, _Z19TransformInitOutputP7_JNIEnvP8_jobjectN15mialgo_saliency26_tag_ALGO_SALIENCY_INITOUTE, _Z21SetFieldValueToObjectIiEvP7_JNIEnvP8_jobjectNSt6__ndk112basic_stringIcNS4_11char_traitsIcEENS4_9allocatorIcEEEEcRT_, _Z21SetFieldValueToObjectIyEvP7_JNIEnvP8_jobjectNSt6__ndk112basic_stringIcNS4_11char_traitsIcEENS4_9allocatorIcEEEEcRT_, _Z21TransformProcessInputP7_JNIEnvP8_jobjectRN15mialgo_saliency26_tag_ALGO_SALIENCY_INPARAME, _Z22TransformProcessOutputP7_JNIEnvP8_jobjectN15mialgo_saliency25_tag_ALGO_SALIENCY_RUNOUTE, _Z23GetFieldValueFromObjectIiEvP7_JNIEnvP8_jobjectNSt6__ndk112basic_stringIcNS4_11char_traitsIcEENS4_9allocatorIcEEEEcRT_, _Z23GetFieldValueFromObjectIyEvP7_JNIEnvP8_jobjectNSt6__ndk112basic_stringIcNS4_11char_traitsIcEENS4_9allocatorIcEEEEcRT_, _Z23GetStringDataFromObjectP7_JNIEnvP8_jobjectNSt6__ndk112basic_stringIcNS3_11char_traitsIcEENS3_9allocatorIcEEEERS9_, _Z24SetByteArrayDataToObjectP7_JNIEnvP8_jobjectNSt6__ndk112basic_stringIcNS3_11char_traitsIcEENS3_9allocatorIcEEEEPcy, _Z26GetByteArrayDataFromObjectP7_JNIEnvP8_jobjectNSt6__ndk112basic_stringIcNS3_11char_traitsIcEENS3_9allocatorIcEEEEPcy, _Z28GetProcessInputBufferPointerP7_JNIEnvP8_jobjectPPc, _Z29GetProcessOutputBufferPointerP7_JNIEnvP8_jobjectPPc, _Z32ReleaseProcessInputBufferPointerP7_JNIEnvP8_jobjectPc, _Z33GetByteArrayDataPointerFromObjectP7_JNIEnvP8_jobjectNSt6__ndk112basic_stringIcNS3_11char_traitsIcEENS3_9allocatorIcEEEEPPc, _Z33ReleaseProcessOutputBufferPointerP7_JNIEnvP8_jobjectPc, _Z37ReleaseByteArrayDataPointerFromObjectP7_JNIEnvP8_jobjectNSt6__ndk112basic_stringIcNS3_11char_traitsIcEENS3_9allocatorIcEEEEPc, _ZN18DoProcessInputInfoC2Ev, _ZN18DoProcessInputInfoD2Ev, _ZN19DoProcessOutputInfoC2Ev, _ZN19DoProcessOutputInfoD2Ev, _ZN21DoInitializeInputInfoC2Ev, _ZN21DoInitializeInputInfoD2Ev, _ZNKSt6__ndk121__basic_string_commonILb1EE20__throw_length_errorEv, _ZNSt6__ndk112basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEE21__grow_by_and_replaceEmmmmmmPKc, _ZNSt6__ndk112basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEE6assignEPKcm, _ZNSt6__ndk112basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEEC2IDnEEPKc, __bss_end__, __bss_start, __bss_start__, __end__, _bss_end__, _edata, _end
+
+## dlopen-relevant strings across all algo libs
+
+```
+--- libcamera_video_mein_algo_jni.so
+libc.so
+libxmi_slow_motion_mein.so
+libmialgo_utils.so
+liblog.so
+libm.so
+libc++_shared.so
+libdl.so
+libcamera_video_mein_algo_jni.so
+--- libmialgo_saliency.so
+libOpenCL.so
+libcdsprpc.so
+libmialgo_ai_vision.so
+libc++_shared.so
+libm.so
+liblog.so
+libz.so
+libc.so
+libGLESv3.so
+libEGL.so
+libdl.so
+libmialgo_saliency.so
+--- libmialgo_saliency_jni.so
+libmialgo_saliency.so
+liblog.so
+libm.so
+libc++_shared.so
+libdl.so
+libc.so
+libmialgo_saliency_jni.so
+```
+
