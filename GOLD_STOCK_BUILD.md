@@ -1,10 +1,21 @@
 # Gold-Stock — HyperOS Camera for AOSP Android 16
 
 **Deliverable:** [`Gold-Stock.zip`](https://github.com/evorez/Hyperos-port-Camera-aosp/releases/latest/download/Gold-Stock.zip) — Magisk / KernelSU / KernelSU-Next / APatch flashable module (193 MB, 57 entries).
-**Release tag (current):** `build-20261125-142811` · SHA-256 `327d54ab5dcfd7357c6fd5c1ca2a233ab39f6f5423fc61639206797fd27fce9e` (diagnostics build v5)
+**Build (current):** v6 diagnostics · SHA-256 `4ade8119fbd26ce5ab84bd606774fd160586ec53d05d2e5ce826f3b5bade4c32` · 202,755,350 bytes
+**GitHub Release:** asset upload is currently rejected by GitHub (uploads endpoint EOF / Releases API 500-502 during the 2026-11-25 incident). The ZIP is delivered via Drive; the release will be re-published when the API recovers. Verified facts are unchanged.
 **Diagnosed so far:** v1 copied `libmialgo*` only → still aborted; v2 added a dependency closure but skipped `/vendor|/odm` deps (bug); v3 added the `public.libraries.txt` overlay + the real private vendor dep closure + bionic `debug.ld` logging; v4 (current) expands to a 5-pass closure with `vndk-sp`/`vndk-30..36` scan dirs and writes a `MISSING_DEPS:` audit line so the next diag names any still-unresolvable soname
-**Releases page:** only `build-20261125-142811` is published (Latest). All earlier crashing builds + their tags were deleted from the repo on 2026-11-25 — they survive only as history below.
+**Releases page:** `build-20261125-142811` (v5) is still the published Latest; v6 could not be published because of the GitHub API incident. All earlier crashing builds + their tags were deleted from the repo on 2026-11-25 — they survive only as history below.
 **Earlier attempts (now removed):** `build-20261125-124558` (algo blobs only), `build-20261125-123507` (stock), `build-20261125-122038` (patched), `build-20261125-130801` (bridge v1), `build-20261125-132712` (bridge v3)
+
+## v6 findings (proven without the device)
+
+`tools/apk_native_report.py` + the new `inspect-apk-native` workflow job extract and analyze every native library inside the source APK (`analysis/apk_native_libs.txt`):
+
+- **The APK ships 41 arm64 libs (`lib/arm64-v8a/`) and `libcamera_algoup_jni.xiaomi.so` is NOT one of them.** The lib in the crash stack (`/system/priv-app/MiuiCamera/lib/arm64/libcamera_algoup_jni.xiaomi.so`, 51,552 B) therefore does **not** come from the APK — it comes from the device's vendor/odm partition or from a previously flashed module. Any fix that only edits APK extraction is irrelevant to this crash.
+- The only mialgo blobs the APK does ship are `libmialgo_saliency.so` and `libmialgo_saliency_jni.so` — the algo *engine* is always the vendor's.
+- Earlier "evidence" was circular and is now discarded: the `/system/lib64` mialgo entries seen in the device log were our own v3/v4 copies, and "vendor public libs already has all 5" was our own `public.libraries.txt` overlay read back.
+
+**v6 also removes the biggest user-friction point:** `service.sh` runs the full capture automatically once per boot (marker keyed on `/proc/sys/kernel/random/boot_id`), so the linker error lands in `/sdcard/Download/GoldStock-diag-<ts>.txt` ~60 s after boot without pressing anything.
 
 ## v5 diagnostics (build-20261125-142811) — why the previous logs were useless
 
@@ -43,7 +54,7 @@ If the audit (`Action` button → "algo library audit") shows no `libmialgo*` bl
 **PHASE1_TAG:** `build-20261125-122038` · **SHA-256:** `2d3f1997df46d6e5bc722953b9f30a1ce6f4ba80d1ea18c10162c12ac3779c70`
 
 **Google Drive release copy (current):**
-- [`Gold-Stock.zip`](https://drive.google.com/file/d/1o9M7_gmAuYoLSCEpxI2tNA-JM05od8MA/view?usp=drivesdk) — id `1o9M7_gmAuYoLSCEpxI2tNA-JM05od8MA`, 202,754,722 bytes (v5: proven DT_NEEDED parser + launch reproduction + evidence archive)
+- [`Gold-Stock.zip`](https://drive.google.com/file/d/14YweHa9_Hm0dZrvTIG5Y5-E5XDhsCHIo/view?usp=drivesdk) — id `14YweHa9_Hm0dZrvTIG5Y5-E5XDhsCHIo`, 202,755,350 bytes, SHA-256 `4ade8119fbd2…` (v6: auto-captures the crash evidence on boot, no Action button needed)
 - [`Gold-Stock.zip.sha256`](https://drive.google.com/file/d/1aGUY_mBPToHcGEPUSR1VXiuno9f5LLBf/view?usp=drivesdk) — id `1aGUY_mBPToHcGEPUSR1VXiuno9f5LLBf`
 - Both are **private (owner-only)**, matching the existing `HyperOS-Cam-AOSP-...-universal.zip` on your Drive — share as "anyone with the link" when you publish.
 **Source APK:** Drive `Gold-Stock` (id `1h7ugBvYZAJ05lIqT63opXrOt5dztcGMX`, 182,801,464 bytes) → `com.android.camera`, **versionName 6.1.000660.1** (code 610006601), minSdk 29 / targetSdk 34.
