@@ -216,12 +216,45 @@ jobs:
 
       - name: Inspect MiuiCamera.apk (inspect_only mode)
         if: ${{ inputs.inspect_only == true }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          set -euo pipefail
+          set -Eeuo pipefail
+          : > /tmp/inspect.log
           python3 tools/patch_apk.py input/apk/MiuiCamera.apk \
             --inspect-json /tmp/apk_inspect.json \
-            --inspect-md /tmp/apk_inspect.md
-          cat /tmp/apk_inspect.md >> "$GITHUB_STEP_SUMMARY"
+            --inspect-md /tmp/apk_inspect.md 2>&1 | tee /tmp/inspect.log
+          cp /tmp/apk_inspect.md /tmp/inspect_combined.md
+          if [ -f patches/recon_probes.json ]; then
+            python3 tools/smali_recon.py input/apk/MiuiCamera.apk \
+              --out /tmp/recon.md --probes patches/recon_probes.json 2>&1 | tee -a /tmp/inspect.log || true
+            [ -f /tmp/recon.md ] && cat /tmp/recon.md >> /tmp/inspect_combined.md
+          fi
+          cat /tmp/inspect_combined.md >> "$GITHUB_STEP_SUMMARY" || true
+          # Logs are unreadable in some environments; post the report as commit comments (chunked)
+          python3 - <<'PY_CHUNK'
+          import os, subprocess
+          from pathlib import Path
+          text = Path("/tmp/inspect_combined.md").read_text(encoding="utf-8", errors="ignore")
+          limit = 55000
+          chunks, cur = [], ""
+          for line in text.splitlines(keepends=True):
+              if len(cur) + len(line) > limit:
+                  chunks.append(cur); cur = ""
+              cur += line
+          if cur:
+              chunks.append(cur)
+          for i, chunk in enumerate(chunks, 1):
+              body = f"### inspect report {i}/{len(chunks)}\n\n{chunk}"
+              p = Path(f"/tmp/comment_{i}.md")
+              p.write_text(body, encoding="utf-8")
+              r = subprocess.run(
+                  ["gh", "api", "-X", "POST",
+                   f"repos/{os.environ['GITHUB_REPOSITORY']}/commits/{os.environ['GITHUB_SHA']}/comments",
+                   "-F", f"body=@{p}"],
+                  capture_output=True, text=True)
+              print(f"[INSPECT] comment {i}/{len(chunks)} rc={r.returncode}")
+          PY_CHUNK
 
       - name: Upload inspection report artifact
         if: ${{ inputs.inspect_only == true }}
