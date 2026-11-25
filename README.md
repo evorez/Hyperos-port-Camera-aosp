@@ -1,8 +1,8 @@
 # HYPEROS-CAM-AOSP — Gold-Stock Build
 
-> **Gold-Stock** = HyperOS Camera APK (`Gold-Stock`, 182 MB, Drive ID `1h7ugBvYZAJ05lIqT63opXrOt5dztcGMX`) ported for **AOSP Android 16 (API 36)**.
-> Output: **`Gold-Stock.zip`** — Magisk / KernelSU / APatch flashable module (Generic AOSP profile, 72 patches applied).
-> See [`GOLD_STOCK_BUILD.md`](GOLD_STOCK_BUILD.md) for exact build + flash steps.
+> **Gold-Stock** = HyperOS Camera APK (`Gold-Stock`, 182 MB, Drive ID `1h7ugBvYZAJ05lIqT63opXrOt5dztcGMX`, camera **6.1.000660.1**) ported for **AOSP Android 16 (API 36)**.
+> Output: **`Gold-Stock.zip`** — Magisk / KernelSU / APatch flashable module, generic AOSP profile, released as [`build-20261125-122038`](https://github.com/evorez/Hyperos-port-Camera-aosp/releases/latest).
+> See [`GOLD_STOCK_BUILD.md`](GOLD_STOCK_BUILD.md) for the verified build facts, the patch-coverage table (which of the 72 patches apply to the stock 6.1 base and which are structurally N/A) and flash steps.
 
 Universal **Magisk / KernelSU / KernelSU-Next / APatch** flashable module builder & runtime framework for installing a **modded HyperOS / Leica Camera APK** on **Android 14–16 AOSP ROMs** (LineageOS, PixelOS, crDroid, EvolutionX, DerpFest, Matrixx, etc.).
 
