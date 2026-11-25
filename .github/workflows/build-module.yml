@@ -131,7 +131,7 @@ jobs:
                   if is_last:
                       print("FINALIZED:", body[:300])
                       assert status == "final", f"Expected final, got {status}"
-          print("::notice::Drive upload finalized for " + path.name)
+          print("::notice::Drive upload finalized for " + os.path.basename(path))
           PY
 
   test-and-validate:
