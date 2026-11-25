@@ -174,7 +174,7 @@ ALGO_LIB_DIR="$MODPATH/system/priv-app/MiuiCamera/lib/arm64"
 ALGO_LIB_DIR_ALT="$MODPATH/system/lib64"
 ALGO_LOG="$MODPATH/algo_bridge.log"
 SCAN_DIRS="/vendor/lib64 /odm/lib64 /system/vendor/lib64 /vendor/lib64/camera /odm/lib64/camera /system_ext/lib64 /product/lib64 /vendor/lib64/hw /odm/lib64/hw"
-SYSTEM_LIB_DIRS="/system/lib64 /system_ext/lib64 /product/lib64 /vendor/lib64 /odm/lib64"
+SYSTEM_LIB_DIRS="/system/lib64 /system_ext/lib64 /product/lib64 /apex/com.android.runtime/lib64"
 ALGO_DEPS="./libmialgoengine.so ./libmialgo_basic.so ./libmialgo_utils.so ./libmialgo_noise.so ./libmialgo_processing.so"
 
 mkdir -p "$ALGO_LIB_DIR" "$ALGO_LIB_DIR_ALT"
@@ -256,6 +256,37 @@ while [ "$pass" -le 3 ]; do
   [ "$pass_added" -eq 0 ] && break
   pass=$((pass + 1))
 done
+
+# 6.6 Expose the bridged blobs through Android's public vendor library list.
+# vendor libs are only loadable by apps when listed in public.libraries.txt; this
+# overlay keeps the ROM's original list and appends the algo blobs, so their own
+# private vendor dependencies resolve inside the vendor namespace.
+PLF_REL="system/vendor/etc/public.libraries.txt"
+PLF="$MODPATH/$PLF_REL"
+mkdir -p "$MODPATH/system/vendor/etc"
+if [ -f /vendor/etc/public.libraries.txt ]; then
+  cp -f /vendor/etc/public.libraries.txt "$PLF" 2>/dev/null || : > "$PLF"
+else
+  : > "$PLF"
+fi
+PLF_ADDED=0
+for lib in "$ALGO_LIB_DIR"/*.so; do
+  [ -f "$lib" ] || continue
+  lib_name="${lib##*/}"
+  case "$lib_name" in
+    libmialgo*|libcamera_algoup*|libcam_algoup*|libcam.algo*) ;;
+    *) continue ;;
+  esac
+  [ -f "/vendor/lib64/$lib_name" ] || continue   # only real vendor blobs belong here
+  if ! grep -qx "$lib_name" "$PLF" 2>/dev/null; then
+    echo "$lib_name" >> "$PLF"
+    PLF_ADDED=$((PLF_ADDED + 1))
+    ui_print "  public.libraries.txt += $lib_name"
+    echo "public lib: $lib_name" >> "$ALGO_LOG"
+  fi
+done
+ui_print "  Public vendor libs exposed: $PLF_ADDED"
+echo "public libs added: $PLF_ADDED" >> "$ALGO_LOG"
 
 if [ "$algo_count" -gt 0 ]; then
   ui_print "  Bridged $algo_count vendor lib(s) (incl. dependency closure)"

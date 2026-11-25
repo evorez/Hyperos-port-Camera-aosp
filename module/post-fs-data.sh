@@ -45,6 +45,14 @@ append_pkg_prop() {
   fi
 }
 
+# Enable bionic linker debug output for the camera process (userdebug ROMs honour
+# debug.ld.<tag>). This prints the exact dlopen/dlerror cause for libmialgo*.so
+# into logcat, which the Action button then collects.
+if [ -n "$RESETPROP" ]; then
+  "$RESETPROP" -n debug.ld.app."$CAM_PKG" "dlopen,dlerror" 2>/dev/null
+  "$RESETPROP" -n debug.ld.all "dlerror" 2>/dev/null
+fi
+
 # Dynamically register camera package(s) in AOSP & Qualcomm/MediaTek aux camera lists
 for aux_prop in \
   vendor.camera.aux.packagelist \

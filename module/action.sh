@@ -96,7 +96,7 @@ DIAG_FILE="$DIAG_DIR/GoldStock-diag-$(date +%Y%m%d-%H%M%S).txt"
   echo "--- crash buffer ---"
   logcat -b crash -d -t 400 2>/dev/null
   echo "--- camera/logcat filtered ---"
-  logcat -d -t 1200 2>/dev/null | grep -iE "AndroidRuntime|FATAL|MiuiCamera|com\.android\.camera|UnsatisfiedLinkError|NoClassDefFoundError|VerifyError|ClassNotFoundException|CameraService|avc: denied" | tail -n 300
+  logcat -d -t 4000 2>/dev/null | grep -iE "AndroidRuntime|FATAL|MiuiCamera|com\.android\.camera|UnsatisfiedLinkError|NoClassDefFoundError|VerifyError|ClassNotFoundException|CameraService|avc: denied|linker|dlopen|cannot locate|needed by|not accessible" | tail -n 400
   echo "--- boot log ---"
   tail -n 120 "/data/adb/modules/${MODULE_ID:-hyperos_cam_aosp}/logs/boot.log" 2>/dev/null
 } > "$DIAG_FILE" 2>&1
