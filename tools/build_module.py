@@ -35,6 +35,7 @@ EXEC_ZIP_PATHS = {
     "action.sh",
     "uninstall.sh",
     "module_config.sh",
+    "bin/elf_needed.sh",
 }
 
 TEXT_EXTENSIONS = {".sh", ".prop", ".rule", ".xml", ".txt", ".conf", ".json"}

@@ -48,9 +48,20 @@ append_pkg_prop() {
 # Enable bionic linker debug output for the camera process (userdebug ROMs honour
 # debug.ld.<tag>). This prints the exact dlopen/dlerror cause for libmialgo*.so
 # into logcat, which the Action button then collects.
+# Correct key form is debug.ld.<process name> — the old "debug.ld.app.<pkg>" key never
+# matched anything. App processes are forked from zygote, so the linker caches this
+# at zygote start; that is exactly why this runs in post-fs-data (before zygote).
 if [ -n "$RESETPROP" ]; then
-  "$RESETPROP" -n debug.ld.app."$CAM_PKG" "dlopen,dlerror" 2>/dev/null
-  "$RESETPROP" -n debug.ld.all "dlerror" 2>/dev/null
+  "$RESETPROP" -n debug.ld.all "dlopen,dlerror" 2>/dev/null
+  "$RESETPROP" -n "debug.ld.$CAM_PKG" "dlopen,dlerror" 2>/dev/null
+  "$RESETPROP" -n "debug.ld.zygote64" "dlerror" 2>/dev/null
+  mkdir -p "$MODDIR/logs" 2>/dev/null
+  {
+    echo "[$(date)] linker debug props"
+    echo "  debug.ld.all        = $($RESETPROP debug.ld.all 2>/dev/null)"
+    echo "  debug.ld.$CAM_PKG   = $($RESETPROP "debug.ld.$CAM_PKG" 2>/dev/null)"
+    echo "  debug.ld.zygote64   = $($RESETPROP debug.ld.zygote64 2>/dev/null)"
+  } >> "$MODDIR/logs/boot.log" 2>/dev/null
 fi
 
 # Dynamically register camera package(s) in AOSP & Qualcomm/MediaTek aux camera lists

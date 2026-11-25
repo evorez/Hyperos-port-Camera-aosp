@@ -171,13 +171,18 @@ fi
 ui_print "- Bridging HyperOS vendor algorithm libraries (libmialgo* + deps)..."
 
 ALGO_LIB_DIR="$MODPATH/system/priv-app/MiuiCamera/lib/arm64"
-ALGO_LIB_DIR_ALT="$MODPATH/system/lib64"
+# NOTE (v5): we deliberately no longer mirror the blobs into /system/lib64.
+# A /system/lib64 copy would be resolved inside the *system* namespace, where the
+# blobs' private /vendor dependencies are NOT reachable — that can only make the
+# failure worse. The app's own lib dir is the only place that is both inside the
+# app's linker namespace and able to resolve the private vendor dependency set.
+ALGO_LIB_DIR_ALT=""
 ALGO_LOG="$MODPATH/algo_bridge.log"
 SCAN_DIRS="/vendor/lib64 /odm/lib64 /system/vendor/lib64 /vendor/lib64/camera /odm/lib64/camera /system_ext/lib64 /product/lib64 /vendor/lib64/hw /odm/lib64/hw /vendor/lib64/vndk-sp /odm/lib64/vndk-sp /vendor/lib64/vndk-30 /vendor/lib64/vndk-31 /vendor/lib64/vndk-32 /vendor/lib64/vndk-33 /vendor/lib64/vndk-34 /vendor/lib64/vndk-35 /vendor/lib64/vndk-36"
 SYSTEM_LIB_DIRS="/system/lib64 /system_ext/lib64 /product/lib64 /apex/com.android.runtime/lib64"
 ALGO_DEPS="./libmialgoengine.so ./libmialgo_basic.so ./libmialgo_utils.so ./libmialgo_noise.so ./libmialgo_processing.so"
 
-mkdir -p "$ALGO_LIB_DIR" "$ALGO_LIB_DIR_ALT"
+mkdir -p "$ALGO_LIB_DIR"
 {
   echo "=== Gold-Stock algo bridge log ($(date)) ==="
   echo "scan dirs: $SCAN_DIRS"
@@ -202,9 +207,20 @@ in_system() {
   return 1
 }
 
-# sonames <file> -> lib*.so tokens referenced by the ELF (approximates DT_NEEDED)
+# sonames <file> -> the *real* DT_NEEDED list, parsed from the ELF .dynamic section
+# by bin/elf_needed.sh (toybox-only: dd + od + tr, no readelf/python/awk needed).
+# Falls back to binary string scraping only if the parser cannot run.
 sonames() {
-  # portable binary-safe soname extraction (busybox grep has no reliable -a)
+  if [ -f "$MODPATH/bin/elf_needed.sh" ]; then
+    _full="$(sh "$MODPATH/bin/elf_needed.sh" "$1" 2>/dev/null)"
+    case "$_full" in
+      *"NEEDED   0 "*)
+        return 0 ;;                       # valid ELF with zero dependencies
+      *"ARCH "*)
+        printf '%s\n' "$_full" | sed -n 's/^  - //p'
+        return 0 ;;
+    esac
+  fi
   tr -c '[:print:]' '\n' < "$1" 2>/dev/null | grep -oE 'lib[A-Za-z0-9_.+-]+\.so' | sort -u
 }
 
@@ -213,7 +229,6 @@ copy_lib() {
   _name="${_src##*/}"
   [ -f "$ALGO_LIB_DIR/$_name" ] && return 1
   cp -f "$_src" "$ALGO_LIB_DIR/$_name" 2>/dev/null || return 1
-  cp -f "$_src" "$ALGO_LIB_DIR_ALT/$_name" 2>/dev/null || true
   algo_count=$((algo_count + 1))
   ui_print "  + $_name (from ${_src%/*})"
   echo "copied $_name <- $_src" >> "$ALGO_LOG"
@@ -290,22 +305,37 @@ echo "public libs added: $PLF_ADDED" >> "$ALGO_LOG"
 
 # Post-closure audit: name every soname that is still unresolvable anywhere.
 # This turns "open libmialgoengine.so failed!" into an exact missing-library list.
+# Honest three-way classification of every DT_NEEDED edge:
+#   IN-CLOSURE   -> copied into the app lib dir (fine)
+#   SYSTEM-ONLY  -> exists only on /system|/system_ext|/product; bionic can only use
+#                   it if it is ALREADY loaded in the process. Flagged as ASSUMED.
+#   UNRESOLVED   -> nowhere on the device -> guaranteed "open … failed!"
 MISSING_DEPS=""
+ASSUMED_SYS=""
+EDGES=0
 for lib in "$ALGO_LIB_DIR"/*.so; do
   [ -f "$lib" ] || continue
   for dep in $(sonames "$lib"); do
+    EDGES=$((EDGES + 1))
     [ -f "$ALGO_LIB_DIR/$dep" ] && continue
-    in_system "$dep" && continue
-    find_lib "$dep" >/dev/null && continue
+    if in_system "$dep"; then
+      ASSUMED_SYS="$ASSUMED_SYS $dep"
+      continue
+    fi
     MISSING_DEPS="$MISSING_DEPS $dep"
   done
 done
 MISSING_DEPS="$(echo "$MISSING_DEPS" | tr ' ' '\n' | sort -u | tr '\n' ' ')"
+ASSUMED_SYS="$(echo "$ASSUMED_SYS" | tr ' ' '\n' | sort -u | tr '\n' ' ')"
+echo "closure: $algo_count libs, $EDGES DT_NEEDED edges" >> "$ALGO_LOG"
 if [ -n "$(echo "$MISSING_DEPS" | tr -d ' ')" ]; then
-  ui_print "  ! Unresolvable dependencies: $MISSING_DEPS"
+  ui_print "  ! UNRESOLVED dependencies (guaranteed dlopen failure): $MISSING_DEPS"
   echo "MISSING_DEPS:$MISSING_DEPS" >> "$ALGO_LOG"
 else
   echo "MISSING_DEPS:none" >> "$ALGO_LOG"
+fi
+if [ -n "$(echo "$ASSUMED_SYS" | tr -d ' ')" ]; then
+  echo "ASSUMED_SYSTEM(preloaded):$ASSUMED_SYS" >> "$ALGO_LOG"
 fi
 
 if [ "$algo_count" -gt 0 ]; then
@@ -335,9 +365,10 @@ if [ -d "$MODPATH/system/vendor" ]; then
   fi
 fi
 
-for script in post-fs-data.sh service.sh action.sh uninstall.sh; do
+for script in post-fs-data.sh service.sh action.sh uninstall.sh bin/elf_needed.sh; do
   [ -f "$MODPATH/$script" ] && set_perm "$MODPATH/$script" 0 0 0755
 done
+[ -d "$MODPATH/bin" ] && set_perm_recursive "$MODPATH/bin" 0 0 0755 0755
 
 # 8. Clear Android package cache and stale MiuiCamera dalvik-cache
 ui_print "- Clearing package cache to register privileged permissions..."
