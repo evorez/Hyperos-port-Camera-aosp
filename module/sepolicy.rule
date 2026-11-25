@@ -1,0 +1,23 @@
+# Minimal targeted SEPolicy rules for HyperOS Modded Camera on Enforcing AOSP ROMs
+# Compatible with Magisk (magiskpolicy), KernelSU, KernelSU-Next, and APatch.
+
+# Allow privileged camera app to read camera/vendor properties
+allow priv_app camera_prop file { getattr open read map }
+allow priv_app vendor_camera_prop file { getattr open read map }
+allow priv_app exported_camera_prop file { getattr open read map }
+allow priv_app default_prop file { getattr open read map }
+
+# Allow privileged camera app binder & IPC with cameraserver and camera HAL
+allow priv_app cameraserver binder { call transfer }
+allow priv_app hal_camera_default binder { call transfer }
+allow hal_camera_default priv_app binder { call transfer }
+
+# Allow camera app access to vendor camera data / calibration / watermark directories if present
+allow priv_app vendor_camera_data_file dir { search read open getattr }
+allow priv_app vendor_camera_data_file file { read open getattr map }
+allow priv_app camera_data_file dir { search read open getattr }
+allow priv_app camera_data_file file { read open getattr map }
+
+# Allow GPU / graphics buffer / ion / dmabuf access needed by MiAlgo / Leica post-processing
+allow priv_app gpu_device chr_file { read write open ioctl getattr map }
+allow priv_app dmabuf_system_heap_device chr_file { read write open ioctl getattr }

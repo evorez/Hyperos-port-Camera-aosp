@@ -1,0 +1,278 @@
+name: Validate & Build HyperOS Camera AOSP Module
+
+on:
+  push:
+    branches: ["main", "arena/**"]
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      gdrive_file_id:
+        description: "Google Drive File ID of a source ZIP (e.g. Leica/HyperOS camera pack) or APK"
+        required: false
+        default: ""
+      source_zip_url:
+        description: "Direct download URL of an existing HyperOS/Leica camera ZIP to repackage"
+        required: false
+        default: ""
+      apk_url:
+        description: "Direct download URL for modded MiuiCamera.apk"
+        required: false
+        default: ""
+      extraphoto_url:
+        description: "Optional direct download URL for MiuiExtraPhoto.apk"
+        required: false
+        default: ""
+      inspect_only:
+        description: "Decompile MiuiCamera.apk (--no-res) and publish a feature/smali inspection report instead of building"
+        type: boolean
+        required: false
+        default: false
+      apply_patches:
+        description: "Apply APK smali/asset patches from patch_spec and rebuild+sign MiuiCamera.apk"
+        type: boolean
+        required: false
+        default: false
+      patch_spec:
+        description: "Path to JSON patch spec in repo (used when apply_patches=true)"
+        required: false
+        default: "patches/unlock_features.json"
+      publish_release:
+        description: "Publish the built flashable ZIP to GitHub Releases for direct 1-tap phone download"
+        type: boolean
+        required: false
+        default: true
+      sync_release_tag:
+        description: "Optional: stream an existing release tag ZIP directly to Google Drive (skips build)"
+        required: false
+        default: ""
+      gdrive_upload_uri:
+        description: "Optional: one-time Google Drive resumable upload session URI"
+        required: false
+        default: ""
+
+jobs:
+  sync-release-to-gdrive:
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.sync_release_tag != '' && inputs.gdrive_upload_uri != '' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Download & stream latest release ZIP to Google Drive
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_TAG: ${{ inputs.sync_release_tag }}
+          GDRIVE_UPLOAD_URI: ${{ inputs.gdrive_upload_uri }}
+        run: |
+          set -euo pipefail
+          echo "::add-mask::$GDRIVE_UPLOAD_URI"
+          mkdir -p /tmp/rel_dl
+          gh release download "$RELEASE_TAG" -R "${{ github.repository }}" -p "*.zip" -D /tmp/rel_dl
+          python3 - <<'PY'
+          import glob, os, urllib.request
+          uri = os.environ["GDRIVE_UPLOAD_URI"].strip()
+          files = glob.glob("/tmp/rel_dl/*.zip")
+          assert files, "No release ZIP downloaded"
+          path = files[0]
+          total = os.path.getsize(path)
+          chunk_size = 8 * 1024 * 1024
+          print(f"Streaming {os.path.basename(path)} ({total} bytes) to Google Drive...")
+          offset = 0
+          with open(path, "rb") as f:
+              while offset < total:
+                  data = f.read(chunk_size)
+                  n = len(data)
+                  is_last = (offset + n) >= total
+                  cmd = "upload, finalize" if is_last else "upload"
+                  req = urllib.request.Request(uri, data=data, method="PUT")
+                  req.add_header("Content-Length", str(n))
+                  req.add_header("X-Goog-Upload-Offset", str(offset))
+                  req.add_header("X-Goog-Upload-Command", cmd)
+                  req.add_header("X-Goog-Upload-Total-Size", str(total))
+                  with urllib.request.urlopen(req, timeout=180) as resp:
+                      status = resp.headers.get("X-Goog-Upload-Status", "")
+                      body = resp.read().decode("utf-8", errors="ignore")
+                  offset += n
+                  pct = (offset / total) * 100
+                  print(f"Uploaded {offset}/{total} ({pct:.1f}%) status={status}")
+                  if is_last:
+                      print("FINALIZED:", body[:300])
+                      assert status == "final", f"Expected final, got {status}"
+          PY
+
+  test-and-validate:
+    if: ${{ github.event_name != 'workflow_dispatch' || inputs.sync_release_tag == '' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Run automated test suite
+        run: python3 -m unittest discover -s tests -v
+
+      - name: Dry-run template build & validation
+        run: ./build.sh --allow-no-apk --output dist/template-dryrun.zip
+
+  build-flashable-zip:
+    if: github.event_name == 'workflow_dispatch'
+    needs: test-and-validate
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install apktool (when inspecting or patching APK)
+        if: ${{ inputs.inspect_only == true || inputs.apply_patches == true }}
+        run: |
+          set -euo pipefail
+          mkdir -p "$HOME/.local/bin"
+          curl -fSL "https://raw.githubusercontent.com/iBotPeaches/Apktool/master/scripts/linux/apktool" -o "$HOME/.local/bin/apktool"
+          curl -fSL "https://github.com/iBotPeaches/Apktool/releases/download/v2.11.1/apktool_2.11.1.jar" -o "$HOME/.local/bin/apktool.jar"
+          chmod +x "$HOME/.local/bin/apktool"
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+          "$HOME/.local/bin/apktool" --version
+
+      - name: Download & import source payload
+        env:
+          GDRIVE_ID: ${{ inputs.gdrive_file_id }}
+          SOURCE_ZIP_URL: ${{ inputs.source_zip_url }}
+          APK_URL: ${{ inputs.apk_url }}
+          EXTRA_URL: ${{ inputs.extraphoto_url }}
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/cam_dl
+
+          if [ -n "$GDRIVE_ID" ]; then
+            echo "[DL] Downloading Google Drive file ID: $GDRIVE_ID"
+            DL_FILE="/tmp/cam_dl/downloaded_payload"
+            curl -fSL --retry 3 \
+              "https://drive.usercontent.google.com/download?id=${GDRIVE_ID}&export=download&confirm=t" \
+              -o "$DL_FILE" || true
+
+            if ! python3 -c "import zipfile, sys; sys.exit(0 if zipfile.is_zipfile(sys.argv[1]) else 1)" "$DL_FILE"; then
+              echo "[DL] Direct curl did not yield a ZIP, falling back to gdown..."
+              python3 -m pip install --quiet gdown
+              rm -f "$DL_FILE"
+              gdown "https://drive.google.com/uc?id=${GDRIVE_ID}" --fuzzy -O "$DL_FILE"
+            fi
+
+            ls -lh "$DL_FILE"
+            if python3 -c "import zipfile, sys; z = zipfile.ZipFile(sys.argv[1]); sys.exit(0 if 'AndroidManifest.xml' in z.namelist() else 1)" "$DL_FILE"; then
+              echo "[DL] Detected direct APK payload"
+              cp "$DL_FILE" input/apk/MiuiCamera.apk
+            else
+              echo "[DL] Detected source module ZIP payload; importing..."
+              python3 tools/import_source_zip.py "$DL_FILE"
+            fi
+          fi
+
+          if [ -n "$SOURCE_ZIP_URL" ]; then
+            echo "[DL] Downloading source ZIP from URL..."
+            curl -fSL "$SOURCE_ZIP_URL" -o /tmp/cam_dl/source.zip
+            python3 tools/import_source_zip.py /tmp/cam_dl/source.zip
+          fi
+
+          if [ -n "$APK_URL" ]; then
+            curl -fSL "$APK_URL" -o input/apk/MiuiCamera.apk
+          fi
+
+          if [ -n "$EXTRA_URL" ]; then
+            curl -fSL "$EXTRA_URL" -o input/apk/MiuiExtraPhoto.apk
+          fi
+
+      - name: Inspect MiuiCamera.apk (inspect_only mode)
+        if: ${{ inputs.inspect_only == true }}
+        run: |
+          set -euo pipefail
+          python3 tools/patch_apk.py input/apk/MiuiCamera.apk \
+            --inspect-json /tmp/apk_inspect.json \
+            --inspect-md /tmp/apk_inspect.md
+          cat /tmp/apk_inspect.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload inspection report artifact
+        if: ${{ inputs.inspect_only == true }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: apk-inspect-report
+          path: |
+            /tmp/apk_inspect.md
+            /tmp/apk_inspect.json
+
+      - name: Patch, rebuild & re-sign MiuiCamera.apk
+        if: ${{ inputs.inspect_only != true && inputs.apply_patches == true }}
+        env:
+          PATCH_SPEC: ${{ inputs.patch_spec }}
+        run: |
+          set -euo pipefail
+          python3 tools/patch_apk.py input/apk/MiuiCamera.apk \
+            --patch-spec "$PATCH_SPEC" \
+            --out-apk /tmp/MiuiCamera_patched.apk \
+            --patch-report /tmp/patch_report.md
+          mv -f /tmp/MiuiCamera_patched.apk input/apk/MiuiCamera.apk
+          AAPT2="$(ls -1 /usr/local/lib/android/sdk/build-tools/*/aapt2 2>/dev/null | sort -V | tail -n 1 || true)"
+          if [ -n "$AAPT2" ]; then
+            echo "[VERIFY] Checking patched AndroidManifest.xml with aapt2..."
+            ("$AAPT2" dump badging input/apk/MiuiCamera.apk 2>&1 || true) | grep -E "^package:" | tee /tmp/aapt2_pkg.txt || true
+          fi
+          python3 -c '
+          import sys
+          sys.path.insert(0, "tools")
+          from pathlib import Path
+          from axml_inspector import inspect_apk
+          info = inspect_apk(Path("input/apk/MiuiCamera.apk"))
+          print(f"[VERIFY] APK pkg={info.package} versionName={info.version_name!r} versionCode={info.version_code}")
+          assert info.version_name == "-Universal Cam Evorez", f"Unexpected versionName: {info.version_name!r}"
+          '
+          cat /tmp/patch_report.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Build & validate universal module ZIP
+        if: ${{ inputs.inspect_only != true }}
+        run: ./build.sh
+
+      - name: Upload flashable module ZIP artifact
+        if: ${{ inputs.inspect_only != true }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: hyperos-cam-aosp-module
+          path: |
+            dist/*.zip
+            dist/*.zip.sha256
+
+      - name: Publish GitHub Release for direct download
+        if: ${{ inputs.inspect_only != true && inputs.publish_release == true }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          ZIP_FILE="$(ls -1 dist/*.zip | head -n 1)"
+          SHA_FILE="${ZIP_FILE}.sha256"
+          BASE_NAME="$(basename "$ZIP_FILE")"
+          TAG="build-$(date -u +%Y%m%d-%H%M%S)"
+          SHA_SUM="$(awk '{print $1}' "$SHA_FILE")"
+
+          {
+            echo "Universal Magisk / KernelSU / KernelSU-Next / APatch flashable module for Android 14–16 AOSP ROMs."
+            echo ""
+            echo "- **File**: \`${BASE_NAME}\`"
+            echo "- **SHA-256**: \`${SHA_SUM}\`"
+            echo "- **Install**: Flash directly in Magisk, KernelSU, KernelSU-Next, or APatch and reboot."
+            if [ -f /tmp/patch_report.md ]; then
+              echo ""
+              cat /tmp/patch_report.md
+            fi
+          } > /tmp/release_notes.md
+
+          gh release create "$TAG" "$ZIP_FILE" "$SHA_FILE" \
+            --title "Universal Xiomeme-Leica Camera mod By 𝙴𝚟𝚘𝚛𝚎𝚣 (-Universal Cam Evorez)" \
+            --notes-file /tmp/release_notes.md

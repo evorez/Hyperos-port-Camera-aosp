@@ -1,0 +1,519 @@
+{
+  "name": "Universal Xiomeme-Leica Camera mod By Evorez (-Universal Cam Evorez)",
+  "target": "MiuiCamera.apk (com.android.camera — -Universal Cam Evorez)",
+  "notes": "Frosted glassy-blur bottom card, Additional Tools tweaks panel, true AOSP 60fps freeze fix (0x803c -> 0x0 + Base.smali EIS/VideoSAT disabled), 100x Super Zoom, 0.5x Ultra-Wide + Telephoto (5x) zoom bar in Photo mode, Leica watermark, Lab & Universal settings removed, and version -Universal Cam Evorez.",
+  "patches": [
+    {
+      "id": "replace_package_version_name",
+      "type": "axml_replace",
+      "find_any": [
+        "Universal 5.0 Beta 8.3",
+        "Universal_5.0_Beta_8.3",
+        "5.0.230706.0"
+      ],
+      "replace": "-Universal Cam Evorez",
+      "description": "Replace APK package versionName (Universal 5.0 Beta 8.3) with -Universal Cam Evorez"
+    },
+    {
+      "id": "compile_evorez_ui_and_additional_tools",
+      "type": "compile_java_smali",
+      "java_src_dir": "patches/java",
+      "java_stubs_dir": "patches/java_stubs",
+      "description": "Compile frosted glassy-blur EvorezCardPreference & Additional Tools tweaks UI"
+    },
+    {
+      "id": "disable_universal_settings_flag",
+      "type": "smali_method_bool",
+      "class_contains": "modify/universalsettings.smali",
+      "method": "isSupportUniversalSettings",
+      "return": false,
+      "description": "Disable Universal Settings feature flag completely"
+    },
+    {
+      "id": "inject_evorez_card_and_additional_tools",
+      "type": "inject_evorez_card",
+      "description": "Remove Lab, Universal, and legacy HolyBear rows; attach Additional Tools & frosted glass Evorez card"
+    },
+    {
+      "id": "remove_third_party_label_classes",
+      "type": "remove_smali_files",
+      "path_contains": [
+        "modify/labels/holybear.smali",
+        "modify/labels/sevtinge.smali",
+        "modify/labels/itzdfplayer.smali"
+      ],
+      "description": "Remove HolyBear, Sevtinge, and ItzDFPlayer credit label classes"
+    },
+    {
+      "id": "redirect_activity_launcher_telegram",
+      "type": "smali_replace",
+      "class_contains": "d/c/a/a3.smali",
+      "find": "https://t.me/itzdfplayer_stash/847",
+      "replace": "https://t.me/evorezlabs",
+      "description": "Redirect in-app Telegram launcher link to https://t.me/evorezlabs"
+    },
+    {
+      "id": "watermark_replace_mi_phone_upper",
+      "type": "smali_replace",
+      "class_contains": "",
+      "find": "\"MI PHONE\"",
+      "replace": "\"Leica\"",
+      "description": "Replace MI PHONE watermark text with Leica across all device profiles"
+    },
+    {
+      "id": "watermark_replace_mi_phone_title",
+      "type": "smali_replace",
+      "class_contains": "",
+      "find": "\"MI Phone\"",
+      "replace": "\"Leica\"",
+      "description": "Replace MI Phone watermark text with Leica"
+    },
+    {
+      "id": "watermark_replace_mi_phone_mixed",
+      "type": "smali_replace",
+      "class_contains": "",
+      "find": "\"Mi Phone\"",
+      "replace": "\"Leica\"",
+      "description": "Replace Mi Phone watermark text with Leica"
+    },
+    {
+      "id": "scrub_legacy_arsc_credits",
+      "type": "scrub_arsc_credits",
+      "replacements": [
+        {
+          "old": "Telegram: @HolyBearHome",
+          "new": "https://t.me/evorezlabs"
+        },
+        {
+          "old": "PayPal: @HolyBear0610",
+          "new": "Web: Evorez.in"
+        },
+        {
+          "old": "Original author: @HolyBearHome",
+          "new": "By Evorez | t.me/evorezlabs"
+        },
+        {
+          "old": "@HolyBearHome",
+          "new": "@evorezlabs"
+        },
+        {
+          "old": "@HolyBear0610",
+          "new": "@evorezlabs"
+        },
+        {
+          "old": "HolyBear",
+          "new": "Evorez"
+        },
+        {
+          "old": "Sevtinge",
+          "new": "Evorez"
+        },
+        {
+          "old": "MI PHONE",
+          "new": "Leica"
+        },
+        {
+          "old": "MI Phone",
+          "new": "Leica"
+        },
+        {
+          "old": "Mi Phone",
+          "new": "Leica"
+        }
+      ],
+      "description": "Scrub legacy credit strings and MI Phone strings from resources.arsc in-place"
+    },
+    {
+      "id": "fix_60fps_video_opmode_freeze",
+      "type": "smali_replace",
+      "class_contains": "d/c/a/g6/b/f.smali",
+      "find": "const v4, 0x803c",
+      "replace": "invoke-static {}, Lmodify/AdditionalToolsConfig;->get60FpsOperatingMode()I\n\n    move-result v4",
+      "description": "Fix 60fps Video screen freeze on AOSP by replacing MIUI HSR60 opmode 0x803c with standard AOSP 0x0 (toggleable in Additional Tools)"
+    },
+    {
+      "id": "fix_base_4k30_eis_freeze",
+      "type": "smali_method_bool",
+      "class_contains": "com/mi/device/base.smali",
+      "method": "is4K30FpsEISSupported",
+      "return": false,
+      "description": "Disable forced MIUI 4K EIS in Base.smali so AOSP video sessions do not stall"
+    },
+    {
+      "id": "fix_base_super_eis_freeze",
+      "type": "smali_method_bool",
+      "class_contains": "com/mi/device/base.smali",
+      "method": "isSupportSuperEIS",
+      "return": false,
+      "description": "Disable forced MIUI SuperEIS in Base.smali to prevent AOSP video freeze"
+    },
+    {
+      "id": "fix_base_video_sat_freeze",
+      "type": "smali_method_bool",
+      "class_contains": "com/mi/device/base.smali",
+      "method": "supportVideoSAT",
+      "return": false,
+      "description": "Disable MIUI virtual Video SAT (ID 62) in Base.smali so 60fps video runs smoothly on AOSP HAL"
+    },
+    {
+      "id": "fix_base_sat_fallback",
+      "type": "smali_method_bool",
+      "class_contains": "com/mi/device/base.smali",
+      "method": "shouldCheckSatFallbackState",
+      "return": false,
+      "description": "Disable MIUI SAT fallback state check in Base.smali for smooth AOSP video"
+    },
+    {
+      "id": "fix_60fps_eis_freeze",
+      "type": "smali_method_bool",
+      "class_contains": "com/mi/device/common.smali",
+      "method": "enable1080p60Eis",
+      "return": false,
+      "description": "Keep MIUI proprietary 60fps EIS disabled on AOSP HAL to prevent 60fps video freezing"
+    },
+    {
+      "id": "unlock_1080p60",
+      "type": "smali_method_bool",
+      "class_contains": "com/mi/device/common.smali",
+      "method": "enable1080p60",
+      "return": true,
+      "description": "Unlock smooth 1080p 60fps video recording on AOSP"
+    },
+    {
+      "id": "max_zoom_100x_dataitem",
+      "type": "smali_method_delegate",
+      "class_contains": "com/mi/config/dataitemfeature.smali",
+      "method_sig": "getMaxZoom()F",
+      "target": "Lmodify/AdditionalToolsConfig;->getMaxZoom()F",
+      "description": "Hook DataItemFeature.getMaxZoom() to 100x Super Zoom (toggleable in Additional Tools)"
+    },
+    {
+      "id": "max_zoom_100x_common",
+      "type": "smali_method_delegate",
+      "class_contains": "com/mi/device/common.smali",
+      "method_sig": "getMaxZoom()F",
+      "target": "Lmodify/AdditionalToolsConfig;->getMaxZoom()F",
+      "description": "Hook Common.getMaxZoom() to 100x Super Zoom"
+    },
+    {
+      "id": "dataitem_p1_05x_tele_photo",
+      "type": "smali_replace",
+      "class_contains": "com/mi/config/dataitemfeature.smali",
+      "find": "\"0.6:1.0:2.0\"",
+      "replace": "\"0.5:1.0:2.0:5.0\"",
+      "description": "Enable 0.5x Ultra-Wide + 1x + 2x + 5x Telephoto zoom points in DataItemFeature.P1"
+    },
+    {
+      "id": "enable_ultrawide_common",
+      "type": "smali_method_delegate",
+      "class_contains": "com/mi/device/common.smali",
+      "method_sig": "isSupportUltraWide()Z",
+      "target": "Lmodify/AdditionalToolsConfig;->isPhotoUwTeleEnabled()Z",
+      "description": "Enable 0.5x Ultra-Wide zoom support (toggleable in Additional Tools)"
+    },
+    {
+      "id": "enable_optical_zoom_common",
+      "type": "smali_method_delegate",
+      "class_contains": "com/mi/device/common.smali",
+      "method_sig": "isSupportOpticalZoom()Z",
+      "target": "Lmodify/AdditionalToolsConfig;->isPhotoUwTeleEnabled()Z",
+      "description": "Enable multi-lens optical zoom toggle bar (0.5x / 1x / 2x / 5x)"
+    },
+    {
+      "id": "outer_zoom_buttons_common_05x_tele",
+      "type": "smali_replace",
+      "class_contains": "com/mi/device/common.smali",
+      "find": "capture:1.0:2.0;supernight:1.0:2.0;video:1.0:2.0",
+      "replace": "capture:0.5:1.0:2.0:5.0;supernight:0.5:1.0:2.0;video:0.5:1.0:2.0",
+      "description": "Add 0.5x + Telephoto (5x) outer zoom buttons in Photo, Video, and Night modes (Common.smali)"
+    },
+    {
+      "id": "outer_zoom_buttons_base_05x_tele",
+      "type": "smali_replace",
+      "class_contains": "com/mi/device/base.smali",
+      "find": "capture:0.6:1.0:2.0;supernight:0.6:1.0:2.0;video:0.6:1.0:2.0",
+      "replace": "capture:0.5:1.0:2.0:5.0;supernight:0.5:1.0:2.0;video:0.5:1.0:2.0",
+      "description": "Add 0.5x + Telephoto (5x) outer zoom buttons in Photo, Video, and Night modes (Base.smali)"
+    },
+    {
+      "id": "base_supported_zoom_100x",
+      "type": "smali_replace",
+      "class_contains": "com/mi/device/base.smali",
+      "find": "capture_inner:0.6:1:2:3.2:5:10;capture_ruler:4:10:10:10:5",
+      "replace": "capture_inner:0.5:1:2:5:10:30:100;capture_ruler:5:10:10:10:10:10",
+      "description": "Configure Photo zoom ruler stops from 0.5x up to 100x in Base.smali"
+    },
+    {
+      "id": "base_supported_zoom_temp_100x",
+      "type": "smali_replace",
+      "class_contains": "com/mi/device/base.smali",
+      "find": "capture_inner:0.6:1:2:5:10;capture_ruler:4:10:10:5",
+      "replace": "capture_inner:0.5:1:2:5:10:30:100;capture_ruler:5:10:10:10:10:10",
+      "description": "Configure fallback Photo zoom ruler stops from 0.5x up to 100x in Base.smali"
+    },
+    {
+      "id": "zoom_constant_min_05x_field",
+      "type": "smali_replace",
+      "class_contains": "d/c/a/y7/s.smali",
+      "find": ".field public static final a:F = 0.6f",
+      "replace": ".field public static final a:F = 0.5f",
+      "description": "Lower ZoomConstant ultra-wide base ratio from 0.6f to 0.5f"
+    },
+    {
+      "id": "zoom_constant_min_05x_const",
+      "type": "smali_replace",
+      "class_contains": "d/c/a/y7/s.smali",
+      "find": "0x3f19999a",
+      "replace": "0x3f000000",
+      "description": "Lower ZoomConstant default ultra-wide float constant from 0.6f to 0.5f"
+    },
+    {
+      "id": "zoom_range_all_modes_05x_to_100x",
+      "type": "smali_replace",
+      "class_contains": "d/c/a/y7/s$a.smali",
+      "find": "    const/high16 v1, 0x41200000    # 10.0f\n\n    invoke-static {v1}, Ljava/lang/Float;->valueOf(F)Ljava/lang/Float;\n\n    move-result-object v1\n\n    invoke-static {v0, v1}, Landroid/util/Range;->create(Ljava/lang/Comparable;Ljava/lang/Comparable;)Landroid/util/Range;\n\n    move-result-object v1\n\n    sput-object v1, Ld/c/a/y7/s$a;->b:Landroid/util/Range;\n\n    const/high16 v1, 0x41200000    # 10.0f\n\n    invoke-static {v1}, Ljava/lang/Float;->valueOf(F)Ljava/lang/Float;\n\n    move-result-object v1\n\n    invoke-static {v0, v1}, Landroid/util/Range;->create(Ljava/lang/Comparable;Ljava/lang/Comparable;)Landroid/util/Range;\n\n    move-result-object v0\n\n    sput-object v0, Ld/c/a/y7/s$a;->c:Landroid/util/Range;",
+      "replace": "    const/high16 v0, 0x3f000000    # 0.5f\n\n    invoke-static {v0}, Ljava/lang/Float;->valueOf(F)Ljava/lang/Float;\n\n    move-result-object v0\n\n    const/high16 v1, 0x42c80000    # 100.0f\n\n    invoke-static {v1}, Ljava/lang/Float;->valueOf(F)Ljava/lang/Float;\n\n    move-result-object v1\n\n    invoke-static {v0, v1}, Landroid/util/Range;->create(Ljava/lang/Comparable;Ljava/lang/Comparable;)Landroid/util/Range;\n\n    move-result-object v1\n\n    sput-object v1, Ld/c/a/y7/s$a;->b:Landroid/util/Range;\n\n    const/high16 v1, 0x42c80000    # 100.0f\n\n    invoke-static {v1}, Ljava/lang/Float;->valueOf(F)Ljava/lang/Float;\n\n    move-result-object v1\n\n    invoke-static {v0, v1}, Landroid/util/Range;->create(Ljava/lang/Comparable;Ljava/lang/Comparable;)Landroid/util/Range;\n\n    move-result-object v0\n\n    sput-object v0, Ld/c/a/y7/s$a;->c:Landroid/util/Range;",
+      "description": "Set global zoom range from 0.5x up to 100x across modes (ZoomConstant$a b & c)"
+    },
+    {
+      "id": "hybrid_zoom_string_uw_05x_100x",
+      "type": "smali_replace",
+      "class_contains": "d/c/a/y7/r.smali",
+      "find": "\"0.6:1:2:5:10\"",
+      "replace": "\"0.5:1:2:5:10:30:100\"",
+      "description": "Set HybridZoomingSystem ultra-wide & telephoto zoom stops to 0.5:1:2:5:10:30:100"
+    },
+    {
+      "id": "hybrid_zoom_string_default_05x_100x",
+      "type": "smali_replace",
+      "class_contains": "d/c/a/y7/r.smali",
+      "find": "\"1:2:4:6:8:10\"",
+      "replace": "\"0.5:1:2:5:10:30:100\"",
+      "description": "Set default HybridZoomingSystem zoom stops to 0.5:1:2:5:10:30:100"
+    },
+    {
+      "id": "zoom_manager_min_05x",
+      "type": "smali_replace",
+      "class_contains": "d/c/a/y7/t.smali",
+      "find": "0x3f19999a",
+      "replace": "0x3f000000",
+      "description": "Lower ZoomManager minimum zoom clamp from 0.6f to 0.5f"
+    },
+    {
+      "id": "base_profiles_05x_float",
+      "type": "smali_replace",
+      "class_contains": "com/mi/device/base",
+      "find": "0x3f19999a",
+      "replace": "0x3f000000",
+      "description": "Lower Base/Base2 device profile ultra-wide zoom from 0.6f to 0.5f"
+    },
+    {
+      "id": "base_profiles_05x_string",
+      "type": "smali_replace",
+      "class_contains": "com/mi/device/base",
+      "find": "0.6:",
+      "replace": "0.5:",
+      "description": "Replace 0.6x zoom ratio labels with 0.5x in Base/Base2 profiles"
+    },
+    {
+      "id": "unlock_4k_uhd_video",
+      "type": "smali_method_delegate",
+      "class_contains": "com/mi/device/common.smali",
+      "method_sig": "isSupportedVideoQuality4kUHD()Z",
+      "target": "Lmodify/AdditionalToolsConfig;->is4kUhdEnabled()Z",
+      "description": "Unlock 4K UHD video quality option (toggleable in Additional Tools)"
+    },
+    {
+      "id": "unlock_heic_capture",
+      "type": "smali_method_delegate",
+      "class_contains": "com/mi/device/common.smali",
+      "method_sig": "allowCapturingHeicImage()Z",
+      "target": "Lmodify/AdditionalToolsConfig;->isHeicEnabled()Z",
+      "description": "Unlock HEIF/HEIC capture toggle (toggleable in Additional Tools)"
+    },
+    {
+      "id": "unlock_ocr_scanner",
+      "type": "smali_method_delegate",
+      "class_contains": "com/mi/device/common.smali",
+      "method_sig": "isSupportOCR()Z",
+      "target": "Lmodify/AdditionalToolsConfig;->isAiOcrEnabled()Z",
+      "description": "Unlock AI OCR scanner (toggleable in Additional Tools)"
+    },
+    {
+      "id": "unlock_lens_dirty_detect",
+      "type": "smali_method_delegate",
+      "class_contains": "com/mi/device/common.smali",
+      "method_sig": "isSupportLensDirtyDetected()Z",
+      "target": "Lmodify/AdditionalToolsConfig;->isAiOcrEnabled()Z",
+      "description": "Unlock AI dirty-lens detection prompt (toggleable in Additional Tools)"
+    },
+    {
+      "id": "unlock_picture_flaw_check",
+      "type": "smali_method_delegate",
+      "class_contains": "com/mi/device/common.smali",
+      "method_sig": "isSupportPictureFlawCheck()Z",
+      "target": "Lmodify/AdditionalToolsConfig;->isAiOcrEnabled()Z",
+      "description": "Unlock AI picture flaw check (toggleable in Additional Tools)"
+    },
+    {
+      "id": "unlock_video_sky",
+      "type": "smali_method_bool",
+      "class_contains": "com/mi/device/common.smali",
+      "method": "isSupportVideoSky",
+      "return": true,
+      "description": "Unlock AI Dynamic Sky replacement in Video"
+    },
+    {
+      "id": "unlock_video_bokeh",
+      "type": "smali_method_bool",
+      "class_contains": "com/mi/device/common.smali",
+      "method": "isSupportVideoBokeh",
+      "return": true,
+      "description": "Unlock Portrait Video / Movie Bokeh software effect"
+    },
+    {
+      "id": "unlock_shine_compare",
+      "type": "smali_method_bool",
+      "class_contains": "com/mi/device/common.smali",
+      "method": "isSupportShineCompare",
+      "return": true,
+      "description": "Unlock live filter/beauty before-after comparison button"
+    },
+    {
+      "id": "unlock_fastshot",
+      "type": "smali_method_delegate",
+      "class_contains": "com/mi/device/common.smali",
+      "method_sig": "isSupportFastshot()Z",
+      "target": "Lmodify/AdditionalToolsConfig;->isFastshotEnabled()Z",
+      "description": "Unlock Street / Fastshot quick capture (toggleable in Additional Tools)"
+    },
+    {
+      "id": "unlock_hq_quickshot",
+      "type": "smali_method_delegate",
+      "class_contains": "com/mi/device/common.smali",
+      "method_sig": "isSupportHighQualityQuickShot()Z",
+      "target": "Lmodify/AdditionalToolsConfig;->isFastshotEnabled()Z",
+      "description": "Unlock High-Quality Quick Shot (toggleable in Additional Tools)"
+    },
+    {
+      "id": "unlock_hdr_depurple",
+      "type": "smali_method_delegate",
+      "class_contains": "com/mi/device/common.smali",
+      "method_sig": "isSupportDepurpleInHdr()Z",
+      "target": "Lmodify/AdditionalToolsConfig;->isHdrDepurpleEnabled()Z",
+      "description": "Enable HDR chromatic aberration / depurple cleanup (toggleable in Additional Tools)"
+    },
+    {
+      "id": "unlock_front_ai",
+      "type": "smali_method_delegate",
+      "class_contains": "com/mi/device/common.smali",
+      "method_sig": "supportFrontAi()Z",
+      "target": "Lmodify/AdditionalToolsConfig;->isHdrDepurpleEnabled()Z",
+      "description": "Unlock Front AI optimization (toggleable in Additional Tools)"
+    },
+    {
+      "id": "quality_jpeg_100_camera2_builder",
+      "type": "smali_replace",
+      "class_contains": "d/c/b/p4.smali",
+      "find": "    sget-object v0, Landroid/hardware/camera2/CaptureRequest;->JPEG_QUALITY:Landroid/hardware/camera2/CaptureRequest$Key;\n\n    invoke-static {p0}, Ljava/lang/Byte;->valueOf(B)Ljava/lang/Byte;\n\n    move-result-object p0\n\n    invoke-virtual {p1, v0, p0}, Landroid/hardware/camera2/CaptureRequest$Builder;->set(Landroid/hardware/camera2/CaptureRequest$Key;Ljava/lang/Object;)V",
+      "replace": "    sget-object v0, Landroid/hardware/camera2/CaptureRequest;->JPEG_QUALITY:Landroid/hardware/camera2/CaptureRequest$Key;\n\n    invoke-static {}, Lmodify/AdditionalToolsConfig;->getJpegQuality()B\n\n    move-result p0\n\n    invoke-static {p0}, Ljava/lang/Byte;->valueOf(B)Ljava/lang/Byte;\n\n    move-result-object p0\n\n    invoke-virtual {p1, v0, p0}, Landroid/hardware/camera2/CaptureRequest$Builder;->set(Landroid/hardware/camera2/CaptureRequest$Key;Ljava/lang/Object;)V",
+      "description": "Force 100% lossless-grade CaptureRequest.JPEG_QUALITY in Camera2 builder (toggleable in Additional Tools)"
+    },
+    {
+      "id": "quality_jpeg_100_reprocessor",
+      "type": "smali_replace",
+      "class_contains": "com/xiaomi/camera/imagecodec/impl/virtualcamerareprocessor.smali",
+      "find": "    sget-object v11, Landroid/hardware/camera2/CaptureRequest;->JPEG_QUALITY:Landroid/hardware/camera2/CaptureRequest$Key;\n\n    invoke-static {v3}, Ljava/lang/Byte;->valueOf(B)Ljava/lang/Byte;\n\n    move-result-object v3\n\n    invoke-virtual {v1, v11, v3}, Landroid/hardware/camera2/CaptureRequest$Builder;->set(Landroid/hardware/camera2/CaptureRequest$Key;Ljava/lang/Object;)V",
+      "replace": "    sget-object v11, Landroid/hardware/camera2/CaptureRequest;->JPEG_QUALITY:Landroid/hardware/camera2/CaptureRequest$Key;\n\n    invoke-static {}, Lmodify/AdditionalToolsConfig;->getJpegQuality()B\n\n    move-result v3\n\n    invoke-static {v3}, Ljava/lang/Byte;->valueOf(B)Ljava/lang/Byte;\n\n    move-result-object v3\n\n    invoke-virtual {v1, v11, v3}, Landroid/hardware/camera2/CaptureRequest$Builder;->set(Landroid/hardware/camera2/CaptureRequest$Key;Ljava/lang/Object;)V",
+      "description": "Force 100% lossless-grade JPEG_QUALITY in VirtualCameraReprocessor"
+    },
+    {
+      "id": "quality_disable_single_frame_hdr_common",
+      "type": "smali_method_bool",
+      "class_contains": "com/mi/device/common.smali",
+      "method": "performSingleCaptureForHdrPlusMfnr",
+      "return": false,
+      "description": "Disable single-frame HDR+ MFNR shortcut in Common.smali so full multi-frame stacking runs"
+    },
+    {
+      "id": "quality_disable_single_frame_hdr_base",
+      "type": "smali_method_bool",
+      "class_contains": "com/mi/device/base.smali",
+      "method": "performSingleCaptureForHdrPlusMfnr",
+      "return": false,
+      "description": "Disable single-frame HDR+ MFNR shortcut in Base.smali so full multi-frame stacking runs"
+    },
+    {
+      "id": "quality_enable_sw_mfnr_common",
+      "type": "smali_method_delegate",
+      "class_contains": "com/mi/device/common.smali",
+      "method_sig": "supportSwMfnr()Z",
+      "target": "Lmodify/AdditionalToolsConfig;->isMaxQualityEnabled()Z",
+      "description": "Enable software Multi-Frame Noise Reduction (SW MFNR) on AOSP HALs for cleaner pixels"
+    },
+    {
+      "id": "quality_enable_front_sw_mfnr_common",
+      "type": "smali_method_delegate",
+      "class_contains": "com/mi/device/common.smali",
+      "method_sig": "supportFrontSwMfnr()Z",
+      "target": "Lmodify/AdditionalToolsConfig;->isMaxQualityEnabled()Z",
+      "description": "Enable Front camera SW MFNR for sharper, less grainy selfies"
+    },
+    {
+      "id": "quality_enable_zoom_mfnr_common",
+      "type": "smali_method_delegate",
+      "class_contains": "com/mi/device/common.smali",
+      "method_sig": "supportZoomMfnr()Z",
+      "target": "Lmodify/AdditionalToolsConfig;->isMaxQualityEnabled()Z",
+      "description": "Enable Zoom MFNR multi-frame denoising so zoomed photos stay sharp"
+    },
+    {
+      "id": "quality_enable_front_beauty_mfnr_common",
+      "type": "smali_method_delegate",
+      "class_contains": "com/mi/device/common.smali",
+      "method_sig": "isSupportFrontBeautyMFNR()Z",
+      "target": "Lmodify/AdditionalToolsConfig;->isMaxQualityEnabled()Z",
+      "description": "Enable Front Beauty MFNR multi-frame clarity"
+    },
+    {
+      "id": "quality_enable_front_portrait_mfnr_common",
+      "type": "smali_method_delegate",
+      "class_contains": "com/mi/device/common.smali",
+      "method_sig": "isSupportFrontPortraitMFNR()Z",
+      "target": "Lmodify/AdditionalToolsConfig;->isMaxQualityEnabled()Z",
+      "description": "Enable Front Portrait MFNR multi-frame clarity"
+    },
+    {
+      "id": "quality_enable_normal_wide_ldc_common",
+      "type": "smali_method_delegate",
+      "class_contains": "com/mi/device/common.smali",
+      "method_sig": "isSupportNormalWideLDC()Z",
+      "target": "Lmodify/AdditionalToolsConfig;->isMaxQualityEnabled()Z",
+      "description": "Enable Normal Wide Lens Distortion Correction (LDC) for sharper edges"
+    },
+    {
+      "id": "quality_enable_ultrawide_ldc_common",
+      "type": "smali_method_delegate",
+      "class_contains": "com/mi/device/common.smali",
+      "method_sig": "isSupportUltraWideLDC()Z",
+      "target": "Lmodify/AdditionalToolsConfig;->isMaxQualityEnabled()Z",
+      "description": "Enable Ultra-Wide Lens Distortion Correction (LDC)"
+    },
+    {
+      "id": "quality_video_bitrate_4k_65mbps",
+      "type": "smali_replace",
+      "class_contains": "com/mi/device/common.smali",
+      "find": "const v1, 0x24b76a0",
+      "replace": "const v1, 0x3dfd240",
+      "description": "Boost 4K video encoding bitrate from 38.5 Mbps to 65 Mbps to eliminate video pixelation"
+    },
+    {
+      "id": "quality_video_bitrate_1080p_30mbps",
+      "type": "smali_replace",
+      "class_contains": "com/mi/device/common.smali",
+      "find": "const v1, 0xeafc40",
+      "replace": "const v1, 0x1c9c380",
+      "description": "Boost 1080p video encoding bitrate from 15.4 Mbps to 30 Mbps for crisp detail"
+    }
+  ]
+}

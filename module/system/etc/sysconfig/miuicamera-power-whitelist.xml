@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Prevent AOSP Doze / App Standby from killing background HDR / Night / MiAlgo
+  image processing jobs right after capture.
+-->
+<config>
+    <allow-in-power-save package="com.android.camera"/>
+    <allow-in-data-usage-save package="com.android.camera"/>
+</config>

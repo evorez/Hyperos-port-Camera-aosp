@@ -1,0 +1,17 @@
+# Generic multi-device AOSP camera properties
+# Applied by post-fs-data.sh via resetprop when no device-specific profile matches.
+# Keep generic defaults conservative to avoid breaking AOSP SystemUI or Play Integrity.
+
+# Enable Camera2 / auxiliary lens access for Xiaomi Camera HALs
+persist.vendor.camera.expose.aux=1
+persist.camera.expose.aux=1
+
+# Prevent aggressive camera HAL timeouts during Night / HDR / Leica capture
+persist.vendor.camera.enableAdvanceFeatures=0x347
+
+# Maximize pixel sharpness, MFNR multi-frame denoise, and 100% JPEG quality on AOSP HALs
+persist.vendor.camera.mfnr=1
+persist.camera.mfnr=1
+persist.vendor.camera.jpeg.quality=100
+persist.camera.jpeg.quality=100
+persist.vendor.camera.zsl.mode=1

@@ -1,0 +1,22 @@
+# Build outputs and staging artifacts
+dist/
+build/
+*.zip
+*.zip.sha256
+
+# Local APK / binary payloads (uncomment if you want to commit APKs privately)
+input/apk/*.apk
+input/app_libs/
+input/system_extra/
+input/lib64/*.so
+input/framework/*.jar
+input/vendor/**/*.so
+
+# Python / OS / Editor artifacts
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.DS_Store
+Thumbs.db
+*.swp
+*.log

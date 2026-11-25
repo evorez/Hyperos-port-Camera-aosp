@@ -1,0 +1,6 @@
+id={{MODULE_ID}}
+name={{MODULE_NAME}}
+version={{MODULE_VERSION}}
+versionCode={{MODULE_VERSION_CODE}}
+author={{MODULE_AUTHOR}}
+description={{MODULE_DESCRIPTION}}{{UPDATE_JSON_LINE}}
