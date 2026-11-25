@@ -387,7 +387,7 @@ jobs:
     if: ${{ github.event_name == 'workflow_dispatch' && inputs.verify_tag != '' }}
     runs-on: ubuntu-latest
     permissions:
-      contents: read
+      contents: write
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -458,15 +458,19 @@ jobs:
                       found_all = True
                       with zipfile.ZipFile(apk_path) as azf:
                           dexes = [(n, azf.read(n)) for n in azf.namelist() if n.endswith(".dex")]
+                      print(f"::notice::APK {info.package} {info.version_name} (code {info.version_code}), "
+                            f"minSdk {info.min_sdk}, targetSdk {info.target_sdk}")
                       for sym in EXPECT:
                           hit = [n for n, blob in dexes if sym.encode() in blob]
                           if hit:
                               lines.append(f"- patch symbol `{sym}` found in {', '.join(hit)} ✅")
+                              print(f"::notice::patch symbol {sym} present in {', '.join(hit)}")
                           else:
                               found_all = False
                               lines.append(f"- patch symbol `{sym}` **missing** ❌")
+                              print(f"::error::patch symbol {sym} missing from shipped DEX")
                       if not found_all:
-                          print("::error::expected patch symbols missing from shipped DEX")
+                          sys.exit(1)
           print("\n".join(lines))
           pathlib.Path("/tmp/verify.md").write_text("\n".join(lines) + "\n", encoding="utf-8")
           PY
@@ -477,7 +481,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -euo pipefail
-          grep -E '^- ' /tmp/verify.md | sed -e 's/[`*]//g' | while IFS= read -r line; do
+          grep -E '^- ' /tmp/verify.md | head -n 4 | sed -e 's/[`*]//g' | while IFS= read -r line; do
             echo "::notice::${line:0:600}"
           done || true
           {
