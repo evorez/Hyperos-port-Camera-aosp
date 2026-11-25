@@ -63,7 +63,7 @@ jobs:
     if: ${{ github.event_name == 'workflow_dispatch' && inputs.sync_release_tag != '' && inputs.gdrive_upload_uri != '' }}
     runs-on: ubuntu-latest
     permissions:
-      contents: read
+      contents: write
     steps:
       - name: Download & stream latest release ZIP to Google Drive
         env:
@@ -77,7 +77,8 @@ jobs:
           diag() {
             rc=$?
             [ "$rc" -eq 0 ] && return 0
-            echo "::error::sync-to-drive failed (rc=$rc) at line ${LINENO}"
+            TAIL="$(sed -e 's/\x1b\[[0-9;]*[a-zA-Z]//g' /tmp/sync.log 2>/dev/null | tail -n 8 | tr '\n' ' ' | cut -c1-700)"
+            echo "::error::sync-to-drive failed (rc=$rc): ${TAIL}"
             {
               echo "### sync-to-drive failure (line ${LINENO}, rc=$rc)"
               echo '```'
