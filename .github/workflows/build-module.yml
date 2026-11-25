@@ -77,7 +77,7 @@ jobs:
           gh release download "$RELEASE_TAG" -R "${{ github.repository }}" -p "*.zip" -p "*.sha256" -D /tmp/rel_dl
           ls -lh /tmp/rel_dl
           python3 - <<'PY'
-          import glob, os, urllib.request
+          import glob, os, urllib.error, urllib.request
           uri = os.environ["GDRIVE_UPLOAD_URI"].strip()
           files = glob.glob("/tmp/rel_dl/*.zip")
           assert files, "No release ZIP downloaded"
@@ -88,7 +88,7 @@ jobs:
           offset = 0
           with open(path, "rb") as f:
               while offset < total:
-                  data = f.read(chunk_size)
+                  data = f.read(min(chunk_size, total - offset))
                   n = len(data)
                   is_last = (offset + n) >= total
                   cmd = "upload, finalize" if is_last else "upload"
@@ -97,9 +97,17 @@ jobs:
                   req.add_header("X-Goog-Upload-Offset", str(offset))
                   req.add_header("X-Goog-Upload-Command", cmd)
                   req.add_header("X-Goog-Upload-Total-Size", str(total))
-                  with urllib.request.urlopen(req, timeout=180) as resp:
-                      status = resp.headers.get("X-Goog-Upload-Status", "")
-                      body = resp.read().decode("utf-8", errors="ignore")
+                  try:
+                      with urllib.request.urlopen(req, timeout=300) as resp:
+                          status = resp.headers.get("X-Goog-Upload-Status", "")
+                          body = resp.read().decode("utf-8", errors="ignore")
+                  except urllib.error.HTTPError as exc:
+                      detail = exc.read().decode("utf-8", errors="ignore")[:300]
+                      print(f"::error::Drive upload HTTP {exc.code} at offset {offset}: {detail}")
+                      raise
+                  except Exception as exc:  # noqa: BLE001
+                      print(f"::error::Drive upload failed at offset {offset}: {type(exc).__name__}: {exc}")
+                      raise
                   offset += n
                   pct = (offset / total) * 100
                   print(f"Uploaded {offset}/{total} ({pct:.1f}%) status={status}")
